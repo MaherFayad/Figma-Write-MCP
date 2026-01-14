@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 
 // ============================================================================
-// Inject Global Styles (matching Swap-all-Variables plugin)
+// Inject Global Styles
 // ============================================================================
 
 const globalStyles = `
@@ -11,30 +11,20 @@ const globalStyles = `
 
 :root {
     --transition-rule: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    
     --gap-l: 1.25rem;
     --gap-m: 0.875rem;
     --gap-s: 0.5rem;
     --gap-xs: 0.25rem;
-    
     --font-size-m: 0.875rem;
     --font-size-s: 0.75rem;
-    --font-size-xs: 0.5rem;
-    
     --radius-m: 0.625rem;
     --radius-s: 0.375rem;
     
-    /* Dark mode defaults with fallbacks */
     --vk-color-accent-themed: #4A90FF;
-    --vk-color-accent-themed-hover: #5EA0FF;
-    --vk-color-accent-themed-darked: #3a72cc;
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
-    --shadow-button: 0 2px 12px rgba(74, 144, 255, 0.5);
     
-    /* Figma color variable fallbacks (dark mode defaults) */
+    /* Dark mode defaults */
     --figma-color-bg: #2c2c2c;
     --figma-color-bg-secondary: #383838;
     --figma-color-bg-tertiary: #444444;
@@ -48,25 +38,17 @@ const globalStyles = `
     --figma-color-icon: #b3b3b3;
     --figma-color-icon-secondary: #808080;
     --figma-color-icon-tertiary: #666666;
-    --figma-color-bg-inverse: #ffffff;
-    --figma-color-text-oninverse: #000000;
     
     background-color: var(--figma-color-bg);
     color: var(--figma-color-text);
 }
 
-
-/* Light mode overrides */
+/* Light mode */
 :root.figma-light, .figma-light {
     --vk-color-accent-themed: #0066FF;
-    --vk-color-accent-themed-hover: #0052CC;
-    --vk-color-accent-themed-darked: #0052cc;
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-    --shadow-button: 0 2px 8px rgba(0, 102, 255, 0.25);
     
-    /* Light mode Figma color fallbacks */
     --figma-color-bg: #ffffff;
     --figma-color-bg-secondary: #f5f5f5;
     --figma-color-bg-tertiary: #e5e5e5;
@@ -80,74 +62,13 @@ const globalStyles = `
     --figma-color-icon: #666666;
     --figma-color-icon-secondary: #999999;
     --figma-color-icon-tertiary: #cccccc;
-    --figma-color-bg-inverse: #333333;
-    --figma-color-text-oninverse: #ffffff;
 }
-
-
-/* Dark mode (explicit, for when class is applied) */
-:root.figma-dark, .figma-dark {
-    --vk-color-accent-themed: #4A90FF;
-    --vk-color-accent-themed-hover: #5EA0FF;
-    --vk-color-accent-themed-darked: #3a72cc;
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
-    --shadow-button: 0 2px 12px rgba(74, 144, 255, 0.5);
-}
-
 
 * {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     padding: 0;
     margin: 0;
     box-sizing: border-box;
-}
-
-*:focus-visible {
-    outline: 2px solid var(--figma-color-border-selected);
-    outline-offset: 2px;
-    border-radius: var(--radius-s);
-}
-
-/* Global scrollbar styling */
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--figma-color-bg-secondary);
-    border-radius: var(--radius-s);
-    margin: 2px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--figma-color-border);
-    border-radius: var(--radius-s);
-    border: 2px solid var(--figma-color-bg-secondary);
-    transition: background var(--transition-rule);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--figma-color-border-strong);
-}
-
-::-webkit-scrollbar-thumb:active {
-    background: var(--figma-color-icon);
-}
-
-.figma-dark ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: transparent;
-}
-
-.figma-dark ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.figma-dark ::-webkit-scrollbar-thumb:active {
-    background: rgba(255, 255, 255, 0.4);
 }
 
 body {
@@ -157,56 +78,24 @@ body {
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes spin {
-    to {
-        transform: scaleX(-1) rotate(-360deg);
-    }
-}
-
-@keyframes tabSwitch {
-    0% {
-        transform: scale(1) rotate(0deg);
-    }
-    40% {
-        transform: scale(1.25) rotate(-5deg);
-    }
-    100% {
-        transform: scale(1.15) rotate(8deg);
-    }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 .container {
     width: 100%;
+    height: 100vh;
     padding: var(--gap-l);
     font-size: var(--font-size-m);
     animation: fadeIn 300ms ease-out;
     display: flex;
     flex-direction: column;
-    justify-content: start;
-    align-items: stretch;
     gap: var(--gap-l);
-    min-height: 100vh;
 }
 
 .header {
@@ -242,137 +131,37 @@ body {
     box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
 }
 
-.form-item {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gap-s);
+.status-connecting {
+    background-color: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3);
+    animation: pulse 1.5s ease-in-out infinite;
 }
 
-.form-item > label {
-    display: block;
-    padding: 0 var(--gap-xs);
-    font-size: var(--font-size-s);
-    font-weight: 500;
-    color: var(--figma-color-text-secondary);
-    letter-spacing: 0.01em;
-}
-
-/* Segmented Control - matching source plugin */
-.segmented {
-    appearance: none;
-    border: none;
-    display: flex;
-    padding: 4px;
-    position: relative;
-    border-radius: var(--radius-m);
+.info-card {
     background-color: var(--figma-color-bg-secondary);
-    border: 1.5px solid var(--figma-color-border);
-    box-shadow: var(--shadow-sm);
-}
-
-.segmented::before {
-    content: '';
-    position: absolute;
-    border-radius: calc(var(--radius-m) - 4px);
-    background-color: var(--figma-color-bg);
-    box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all var(--transition-spring);
-    z-index: 0;
-    top: 4px;
-    bottom: 4px;
-    width: calc(25% - 4px);
-    left: 4px;
-}
-
-.segmented[data-selected="editing"]::before {
-    transform: translateX(0);
-}
-
-.segmented[data-selected="creating"]::before {
-    transform: translateX(calc(100% + 4px));
-}
-
-.segmented[data-selected="context"]::before {
-    transform: translateX(calc(200% + 8px));
-}
-
-.segmented[data-selected="misc"]::before {
-    transform: translateX(calc(300% + 12px));
-}
-
-.segmented-option {
-    appearance: none;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-grow: 1;
-    gap: var(--gap-xs);
-    padding: var(--gap-s) var(--gap-xs);
-    min-height: 2.25rem;
-    z-index: 1;
-    cursor: pointer;
-    background: none;
-    border: none;
-    border-radius: calc(var(--radius-m) - 4px);
-    transition: transform var(--transition-rule);
-}
-
-.segmented-option:active {
-    transform: scale(.96);
-}
-
-.segmented-option svg {
-    color: var(--figma-color-icon);
-    opacity: 0.5;
-    transition: opacity var(--transition-spring), transform var(--transition-spring);
-}
-
-.segmented-option:hover svg {
-    opacity: 0.75;
-}
-
-.segmented-option.selected svg {
-    opacity: 1;
-    transform: scale(1.15) rotate(8deg);
-    animation: tabSwitch 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Tooltip for segmented */
-.segmented-option .tooltip {
-    position: absolute;
-    top: calc(-1 * var(--gap-s));
-    text-align: center;
-    width: max-content;
-    opacity: 0;
-    border-radius: var(--radius-s);
-    padding: var(--gap-s) var(--gap-m);
-    background-color: var(--figma-color-bg-inverse);
-    color: var(--figma-color-text-oninverse);
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-90%);
-    transition: transform var(--transition-spring), opacity var(--transition-rule);
-    pointer-events: none;
-    font-size: var(--font-size-s);
-    font-weight: 500;
-    z-index: 100;
-}
-
-.segmented-option:hover .tooltip,
-.segmented-option:focus-visible .tooltip {
-    opacity: 1;
-    transform: translateY(-100%);
-}
-
-.mode-description {
-    font-size: var(--font-size-s);
-    color: var(--figma-color-text-secondary);
+    border-radius: var(--radius-m);
     padding: var(--gap-m);
-    background-color: var(--figma-color-bg-secondary);
-    border-radius: var(--radius-m);
-    line-height: 1.5;
     border: 1px solid var(--figma-color-border);
-    animation: slideDown 300ms ease-out;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--gap-xs) 0;
+}
+
+.info-label {
+    font-size: var(--font-size-s);
+    color: var(--figma-color-text-secondary);
+}
+
+.info-value {
+    font-size: var(--font-size-s);
+    font-weight: 500;
+    color: var(--figma-color-text);
+    font-family: 'Fira Code', monospace;
 }
 
 .log-section {
@@ -383,11 +172,33 @@ body {
 }
 
 .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--gap-s);
+}
+
+.log-title {
     font-size: var(--font-size-s);
     font-weight: 600;
-    margin-bottom: var(--gap-s);
     color: var(--figma-color-text-secondary);
-    letter-spacing: 0.01em;
+}
+
+.log-clear-btn {
+    padding: var(--gap-xs) var(--gap-s);
+    font-size: var(--font-size-s);
+    cursor: pointer;
+    background: none;
+    border: 1px solid var(--figma-color-border);
+    border-radius: var(--radius-s);
+    color: var(--figma-color-text-tertiary);
+    transition: all var(--transition-rule);
+}
+
+.log-clear-btn:hover {
+    background-color: var(--figma-color-bg-hover);
+    color: var(--figma-color-text);
+    border-color: var(--figma-color-border-strong);
 }
 
 .log-container {
@@ -398,116 +209,7 @@ body {
     padding: var(--gap-m);
     font-size: var(--font-size-s);
     font-family: 'Fira Code', monospace;
-    border: 1.5px solid var(--figma-color-border);
-    box-shadow: var(--shadow-sm);
-    min-height: 100px;
-    position: relative;
-}
-
-/* Context Menu */
-.context-menu {
-    position: fixed;
-    background-color: var(--figma-color-bg);
-    border: 1.5px solid var(--figma-color-border);
-    border-radius: var(--radius-m);
-    box-shadow: var(--shadow-lg);
-    padding: var(--gap-xs);
-    z-index: 1000;
-    min-width: 120px;
-    animation: fadeIn 150ms ease-out;
-}
-
-.context-menu-item {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-s);
-    padding: var(--gap-s) var(--gap-m);
-    font-size: var(--font-size-s);
-    font-weight: 500;
-    color: var(--figma-color-text);
-    background: none;
-    border: none;
-    border-radius: var(--radius-s);
-    cursor: pointer;
-    width: 100%;
-    text-align: left;
-    transition: all var(--transition-rule);
-}
-
-.context-menu-item:hover {
-    background-color: var(--figma-color-bg-hover);
-}
-
-.context-menu-item.danger {
-    color: #ef4444;
-}
-
-.context-menu-item.danger:hover {
-    background-color: rgba(239, 68, 68, 0.1);
-}
-
-.log-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    position: relative;
-}
-
-.log-clear-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0.5rem;
-    z-index: 10;
-    cursor: pointer;
-    background: none;
-    border: none;
-    border-radius: 0 var(--radius-m) 0 var(--radius-s);
-    color: var(--figma-color-icon-tertiary);
-    opacity: 0.6;
-    transition: all var(--transition-rule);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.log-clear-btn:hover {
-    background-color: var(--figma-color-bg-hover);
-    color: var(--figma-color-icon);
-    opacity: 1;
-}
-
-.log-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    position: relative;
-}
-
-.log-clear-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0.5rem;
-    z-index: 10;
-    cursor: pointer;
-    background: none;
-    border: none;
-    border-radius: 0 var(--radius-m) 0 var(--radius-s);
-    color: var(--figma-color-icon-tertiary);
-    opacity: 0.6;
-    transition: all var(--transition-rule);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.log-clear-btn:hover {
-    background-color: var(--figma-color-bg-hover);
-    color: var(--figma-color-icon);
-    opacity: 1;
+    border: 1px solid var(--figma-color-border);
 }
 
 .log-entry {
@@ -515,12 +217,11 @@ body {
     display: flex;
     gap: var(--gap-s);
     align-items: flex-start;
-    animation: fadeIn 200ms ease-out;
 }
 
 .log-time {
     color: var(--figma-color-text-tertiary);
-    min-width: 70px;
+    min-width: 60px;
     flex-shrink: 0;
 }
 
@@ -535,48 +236,33 @@ body {
 .log-sent { color: #a855f7; }
 .log-info { color: var(--figma-color-text-secondary); }
 
-.footer {
-    margin-top: auto;
-    font-size: var(--font-size-s);
+.empty-log {
     color: var(--figma-color-text-tertiary);
-    text-align: center;
-    padding: var(--gap-s) 0;
+    font-style: italic;
 }
 
-.resizer {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    padding: 0.5rem;
-    z-index: 1;
-    cursor: nwse-resize;
-    transition: all var(--transition-rule);
-    border-radius: var(--radius-m) 0 0 0;
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-.resizer svg {
-    transition: all var(--transition-rule);
-    color: var(--figma-color-icon-tertiary);
-    opacity: 0.6;
+::-webkit-scrollbar-track {
+    background: var(--figma-color-bg-secondary);
+    border-radius: var(--radius-s);
 }
 
-.resizer:hover {
-    background-color: var(--figma-color-bg-hover);
+::-webkit-scrollbar-thumb {
+    background: var(--figma-color-border);
+    border-radius: var(--radius-s);
 }
 
-.resizer:hover svg {
-    color: var(--figma-color-icon-secondary);
-    stroke-width: 2.5px;
-    opacity: 1;
-    transform: scale(1.1);
-}
-
-.resizer:active svg {
-    transform: scale(0.95);
+::-webkit-scrollbar-thumb:hover {
+    background: var(--figma-color-border-strong);
 }
 `;
 
-// Inject styles into document head
+// Inject styles
 const styleSheet = document.createElement("style");
 styleSheet.textContent = globalStyles;
 document.head.appendChild(styleSheet);
@@ -584,8 +270,6 @@ document.head.appendChild(styleSheet);
 // ============================================================================
 // Types
 // ============================================================================
-
-type PluginMode = "editing" | "creating" | "context" | "misc";
 
 interface LogEntry {
     id: number;
@@ -595,51 +279,20 @@ interface LogEntry {
 }
 
 // ============================================================================
-// WebSocket Connection
+// WebSocket Configuration
 // ============================================================================
 
 const WS_URL = "ws://localhost:9000";
-
-// ============================================================================
-// Mode Icons (SVG components matching source plugin style)
-// ============================================================================
-
-const EditingIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
-        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2.5 5.5L5 3l2.5 2.5m3.5-2.5l2.5 2.5L11 8M5 11l-2.5 2.5L5 16m6-2.5L13.5 16 16 13.5" opacity="0.5" />
-        <rect width="5" height="5" x="5.5" y="5.5" stroke="currentColor" strokeWidth="1.5" rx="0.5" />
-    </svg>
-);
-
-const CreatingIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
-        <path stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" d="M8 3v10M3 8h10" />
-        <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
-    </svg>
-);
-
-const ContextIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
-        <circle cx="7" cy="7" r="4.25" stroke="currentColor" strokeWidth="1.5" />
-        <path stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" d="M10.5 10.5L14 14" opacity="0.5" />
-    </svg>
-);
-
-const MiscIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 16 16">
-        <path stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" d="M8 3v2M8 11v2M3 8h2M11 8h2" opacity="0.5" />
-        <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-);
 
 // ============================================================================
 // Main App Component
 // ============================================================================
 
 function App() {
-    const [mode, setMode] = useState<PluginMode>("editing");
     const [connected, setConnected] = useState(false);
+    const [connecting, setConnecting] = useState(true);
     const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [messageCount, setMessageCount] = useState({ received: 0, sent: 0 });
 
     const wsRef = useRef<WebSocket | null>(null);
     const logIdRef = useRef(0);
@@ -648,7 +301,7 @@ function App() {
     // Add log entry
     const log = (type: LogEntry["type"], message: string) => {
         setLogs((prev) => [
-            ...prev.slice(-99), // Keep last 100 entries
+            ...prev.slice(-99),
             {
                 id: logIdRef.current++,
                 timestamp: new Date(),
@@ -665,9 +318,10 @@ function App() {
         }
     }, [logs]);
 
-    // Clear logs function
+    // Clear logs
     const clearLogs = () => {
         setLogs([]);
+        setMessageCount({ received: 0, sent: 0 });
     };
 
     // Connect to MCP Server
@@ -676,21 +330,24 @@ function App() {
         let reconnectTimeout: number | null = null;
 
         const connect = () => {
+            setConnecting(true);
             log("info", `Connecting to ${WS_URL}...`);
+
             ws = new WebSocket(WS_URL);
             wsRef.current = ws;
 
             ws.onopen = () => {
                 setConnected(true);
+                setConnecting(false);
                 log("success", "Connected to MCP Server");
-                // Send current mode
-                ws?.send(JSON.stringify({ type: "mode_update", mode }));
             };
 
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    log("received", `${data.type}: ${data.requestId?.slice(0, 8)}...`);
+                    const shortId = data.requestId?.slice(0, 8) || "N/A";
+                    log("received", `${data.type} [${shortId}]`);
+                    setMessageCount(prev => ({ ...prev, received: prev.received + 1 }));
 
                     // Forward to plugin main thread
                     parent.postMessage({ pluginMessage: data }, "*");
@@ -701,13 +358,18 @@ function App() {
 
             ws.onclose = () => {
                 setConnected(false);
+                setConnecting(false);
                 log("info", "Disconnected. Reconnecting in 3s...");
                 wsRef.current = null;
-                reconnectTimeout = window.setTimeout(connect, 3000);
+                reconnectTimeout = window.setTimeout(() => {
+                    setConnecting(true);
+                    connect();
+                }, 3000);
             };
 
-            ws.onerror = (error) => {
-                log("error", `WebSocket error: ${error}`);
+            ws.onerror = () => {
+                log("error", "Connection failed");
+                setConnecting(false);
             };
         };
 
@@ -725,7 +387,9 @@ function App() {
             const msg = event.data.pluginMessage;
             if (!msg) return;
 
-            log("sent", `${msg.type}: ${msg.requestId?.slice(0, 8)}...`);
+            const shortId = msg.requestId?.slice(0, 8) || "N/A";
+            log("sent", `${msg.type} [${shortId}]`);
+            setMessageCount(prev => ({ ...prev, sent: prev.sent + 1 }));
 
             // Forward to MCP Server
             if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -737,204 +401,85 @@ function App() {
         return () => window.removeEventListener("message", handler);
     }, []);
 
-    // Mode change handler
-    const handleModeChange = (newMode: PluginMode) => {
-        setMode(newMode);
-        log("info", `Mode changed to: ${newMode}`);
-
-        // Notify main thread
-        parent.postMessage({ pluginMessage: { type: "mode_change", mode: newMode } }, "*");
-
-        // Notify MCP Server
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: "mode_update", mode: newMode }));
-        }
+    // Format time
+    const formatTime = (date: Date) => {
+        return date.toLocaleTimeString("en-US", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+        });
     };
 
-    const modes: { value: PluginMode; icon: React.ReactNode; label: string }[] = [
-        { value: "editing", icon: <EditingIcon />, label: "Editing" },
-        { value: "creating", icon: <CreatingIcon />, label: "Creating" },
-        { value: "context", icon: <ContextIcon />, label: "Context" },
-        { value: "misc", icon: <MiscIcon />, label: "Misc" },
-    ];
+    // Get status class
+    const getStatusClass = () => {
+        if (connected) return "status-connected";
+        if (connecting) return "status-connecting";
+        return "status-disconnected";
+    };
+
+    // Get status text
+    const getStatusText = () => {
+        if (connected) return "● Connected";
+        if (connecting) return "◐ Connecting...";
+        return "○ Disconnected";
+    };
 
     return (
         <div className="container">
             {/* Header */}
             <div className="header">
-                <h2 className="title">Figma IDE Bridge</h2>
-                <div className={`status-badge ${connected ? 'status-connected' : 'status-disconnected'}`}>
-                    {connected ? "● Connected" : "○ Disconnected"}
+                <h2 className="title">Figma Bridge</h2>
+                <div className={`status-badge ${getStatusClass()}`}>
+                    {getStatusText()}
                 </div>
             </div>
 
-            {/* Mode Selector - Segmented Tabs */}
-            <div className="form-item">
-                <label>Mode</label>
-                <div className="segmented" data-selected={mode}>
-                    {modes.map((m) => (
-                        <button
-                            key={m.value}
-                            type="button"
-                            className={`segmented-option ${mode === m.value ? 'selected' : ''}`}
-                            onClick={() => handleModeChange(m.value)}
-                        >
-                            {m.icon}
-                            <div className="tooltip">{m.label}</div>
-                        </button>
-                    ))}
+            {/* Connection Info */}
+            <div className="info-card">
+                <div className="info-row">
+                    <span className="info-label">Server URL</span>
+                    <span className="info-value">{WS_URL}</span>
+                </div>
+                <div className="info-row">
+                    <span className="info-label">Messages Received</span>
+                    <span className="info-value">{messageCount.received}</span>
+                </div>
+                <div className="info-row">
+                    <span className="info-label">Messages Sent</span>
+                    <span className="info-value">{messageCount.sent}</span>
                 </div>
             </div>
-
-            {/* Mode Description */}
-            <div className="mode-description">{getModeDescription(mode)}</div>
 
             {/* Activity Log */}
             <div className="log-section">
-                <div className="log-header">Activity Log</div>
-                <div className="log-wrapper">
-                    <div
-                        className="log-container"
-                        ref={logContainerRef}
-                    >
-                        {logs.length === 0 ? (
-                            <div style={{ color: 'var(--figma-color-text-tertiary)', fontStyle: 'italic' }}>
-                                No activity yet...
-                            </div>
-                        ) : (
-                            logs.map((entry) => (
-                                <div key={entry.id} className="log-entry">
-                                    <span className="log-time">
-                                        {entry.timestamp.toLocaleTimeString()}
-                                    </span>
-                                    <span className={`log-message log-${entry.type}`}>
-                                        {entry.message}
-                                    </span>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                    {/* Floating Clear Button */}
-                    <button
-                        className="log-clear-btn"
-                        onClick={clearLogs}
-                        title="Clear Log"
-                    >
-                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2.5 4.5H13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                            <path d="M11.5 4.5V3.5C11.5 2.94772 11.0523 2.5 10.5 2.5H5.5C4.94772 2.5 4.5 2.94772 4.5 3.5V4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                            <path d="M5.5 4.5V12.5C5.5 13.0523 5.94772 13.5 6.5 13.5H9.5C10.0523 13.5 10.5 13.0523 10.5 12.5V4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                        </svg>
+                <div className="log-header">
+                    <span className="log-title">Activity Log</span>
+                    <button className="log-clear-btn" onClick={clearLogs}>
+                        Clear
                     </button>
                 </div>
+                <div className="log-container" ref={logContainerRef}>
+                    {logs.length === 0 ? (
+                        <div className="empty-log">Waiting for activity...</div>
+                    ) : (
+                        logs.map((entry) => (
+                            <div key={entry.id} className="log-entry">
+                                <span className="log-time">{formatTime(entry.timestamp)}</span>
+                                <span className={`log-message log-${entry.type}`}>
+                                    {entry.message}
+                                </span>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
-
-
-            {/* Resizer */}
-            <Resizer />
         </div>
     );
 }
 
 // ============================================================================
-// Resizer Component
-// ============================================================================
-
-function Resizer() {
-    const resizerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const resizer = resizerRef.current;
-        if (!resizer) return;
-
-        let width = window.innerWidth;
-        let height = window.innerHeight;
-        let pointerDownCursorPosition: { x: number; y: number } | null = null;
-
-        const handlePointerDown = (event: PointerEvent) => {
-            pointerDownCursorPosition = {
-                x: event.offsetX,
-                y: event.offsetY
-            };
-            resizer.setPointerCapture(event.pointerId);
-        };
-
-        const handlePointerUp = (event: PointerEvent) => {
-            pointerDownCursorPosition = null;
-            resizer.releasePointerCapture(event.pointerId);
-            parent.postMessage({
-                pluginMessage: {
-                    type: 'saveSize', message: { width, height }
-                }
-            }, '*');
-        };
-
-        const handlePointerMove = (event: PointerEvent) => {
-            if (pointerDownCursorPosition === null) return;
-
-            width = Math.round(
-                event.clientX +
-                (resizer.offsetWidth - pointerDownCursorPosition.x)
-            );
-            height = Math.round(
-                event.clientY +
-                (resizer.offsetHeight - pointerDownCursorPosition.y)
-            );
-
-            parent.postMessage({
-                pluginMessage: {
-                    type: 'resize', message: { width, height }
-                }
-            }, '*');
-        };
-
-        const handleDblClick = () => {
-            parent.postMessage({
-                pluginMessage: { type: 'defaultSize' }
-            }, '*');
-        };
-
-        resizer.addEventListener('pointerdown', handlePointerDown);
-        resizer.addEventListener('pointerup', handlePointerUp);
-        resizer.addEventListener('pointermove', handlePointerMove);
-        resizer.addEventListener('dblclick', handleDblClick);
-
-        return () => {
-            resizer.removeEventListener('pointerdown', handlePointerDown);
-            resizer.removeEventListener('pointerup', handlePointerUp);
-            resizer.removeEventListener('pointermove', handlePointerMove);
-            resizer.removeEventListener('dblclick', handleDblClick);
-        };
-    }, []);
-
-    return (
-        <div className="resizer" ref={resizerRef}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5.84701 13.6252C7.71212 13.1254 9.41282 12.1435 10.7782 10.7782C12.1435 9.41282 13.1254 7.71212 13.6252 5.84701" />
-            </svg>
-        </div>
-    );
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function getModeDescription(mode: PluginMode): string {
-    switch (mode) {
-        case "editing":
-            return "Focus on modifying properties of selected nodes. Ideal for styling, renaming, and repositioning.";
-        case "creating":
-            return "Focus on generating new layers, components, and pages. Prioritizes local styles and variables.";
-        case "context":
-            return "Focus on reading and scanning the document. Returns layer trees and metadata without modification.";
-        case "misc":
-            return "General utility tasks like exporting, plugin state management, and diagnostics.";
-    }
-}
-
-// ============================================================================
-// Render
+// Mount App
 // ============================================================================
 
 const root = ReactDOM.createRoot(document.getElementById("root")!);
