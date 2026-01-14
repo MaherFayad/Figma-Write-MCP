@@ -19,6 +19,9 @@ figma.ui.onmessage = async (msg: {
     code?: string;
     pageId?: string;
     mode?: string;
+    nodeId?: string;
+    scale?: number;
+    format?: string;
     message?: { width?: number; height?: number };
 }) => {
     const { type, requestId, message } = msg;
@@ -39,6 +42,14 @@ figma.ui.onmessage = async (msg: {
 
             case "get_styles":
                 await handleGetStyles(requestId!);
+                break;
+
+            case "get_selection_context":
+                await handleGetSelectionContext(requestId!);
+                break;
+
+            case "export_node_image":
+                await handleExportNodeImage(requestId!, msg.nodeId, msg.scale || 2, msg.format || "png");
                 break;
 
             case "mode_change":
@@ -547,4 +558,358 @@ async function handleGetStyles(requestId: string) {
     } catch (error) {
         sendError(requestId, error, "get_styles");
     }
+}
+
+// ============================================================================
+// Get Selection Context - Comprehensive Details About Selected Nodes
+// ============================================================================
+
+async function handleGetSelectionContext(requestId: string) {
+    try {
+        const selection = figma.currentPage.selection;
+
+        if (selection.length === 0) {
+            figma.ui.postMessage({
+                type: "execution_result",
+                requestId,
+                result: { error: "No nodes selected", nodes: [] },
+            });
+            return;
+        }
+
+        const nodes = selection.map((node) => extractNodeContext(node));
+
+        figma.ui.postMessage({
+            type: "execution_result",
+            requestId,
+            result: {
+                selectionCount: selection.length,
+                nodes,
+            },
+        });
+    } catch (error) {
+        sendError(requestId, error, "get_selection_context");
+    }
+}
+
+function extractNodeContext(node: SceneNode): Record<string, unknown> {
+    const context: Record<string, unknown> = {
+        // Basic info
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        visible: node.visible,
+    };
+
+    // Position & Size
+    if ("x" in node && "y" in node) {
+        context.position = { x: node.x, y: node.y };
+    }
+    if ("width" in node && "height" in node) {
+        context.size = { width: node.width, height: node.height };
+    }
+    if ("rotation" in node) {
+        context.rotation = node.rotation;
+    }
+
+    // Colors - Fills
+    if ("fills" in node && node.fills !== figma.mixed) {
+        context.fills = (node.fills as readonly Paint[]).map(paintToContext);
+    }
+
+    // Colors - Strokes
+    if ("strokes" in node && node.strokes) {
+        context.strokes = (node.strokes as readonly Paint[]).map(paintToContext);
+        if ("strokeWeight" in node) {
+            context.strokeWeight = node.strokeWeight;
+        }
+        if ("strokeAlign" in node) {
+            context.strokeAlign = node.strokeAlign;
+        }
+    }
+
+    // Style IDs
+    if ("fillStyleId" in node && node.fillStyleId) {
+        context.fillStyleId = node.fillStyleId;
+    }
+    if ("strokeStyleId" in node && node.strokeStyleId) {
+        context.strokeStyleId = node.strokeStyleId;
+    }
+    if ("effectStyleId" in node && node.effectStyleId) {
+        context.effectStyleId = node.effectStyleId;
+    }
+    if ("textStyleId" in node && node.textStyleId) {
+        context.textStyleId = node.textStyleId;
+    }
+
+    // Corner Radius
+    if ("cornerRadius" in node) {
+        if (node.cornerRadius === figma.mixed) {
+            context.cornerRadius = {
+                mixed: true,
+                topLeft: (node as FrameNode).topLeftRadius,
+                topRight: (node as FrameNode).topRightRadius,
+                bottomRight: (node as FrameNode).bottomRightRadius,
+                bottomLeft: (node as FrameNode).bottomLeftRadius,
+            };
+        } else {
+            context.cornerRadius = node.cornerRadius;
+        }
+    }
+
+    // Opacity & Blend Mode
+    if ("opacity" in node) {
+        context.opacity = node.opacity;
+    }
+    if ("blendMode" in node) {
+        context.blendMode = node.blendMode;
+    }
+
+    // Effects (shadows, blur)
+    if ("effects" in node && node.effects.length > 0) {
+        context.effects = node.effects.map(effectToContext);
+    }
+
+    // Typography (Text nodes)
+    if (node.type === "TEXT") {
+        const textNode = node as TextNode;
+        context.text = {
+            characters: textNode.characters,
+            fontName: textNode.fontName !== figma.mixed ? textNode.fontName : "mixed",
+            fontSize: textNode.fontSize !== figma.mixed ? textNode.fontSize : "mixed",
+            fontWeight: textNode.fontWeight !== figma.mixed ? textNode.fontWeight : "mixed",
+            lineHeight: textNode.lineHeight !== figma.mixed ? textNode.lineHeight : "mixed",
+            letterSpacing: textNode.letterSpacing !== figma.mixed ? textNode.letterSpacing : "mixed",
+            textAlignHorizontal: textNode.textAlignHorizontal,
+            textAlignVertical: textNode.textAlignVertical,
+            textCase: textNode.textCase !== figma.mixed ? textNode.textCase : "mixed",
+            textDecoration: textNode.textDecoration !== figma.mixed ? textNode.textDecoration : "mixed",
+        };
+    }
+
+    // Auto Layout / Spacing
+    if (node.type === "FRAME" || node.type === "COMPONENT" || node.type === "INSTANCE") {
+        const frameNode = node as FrameNode | ComponentNode | InstanceNode;
+        if (frameNode.layoutMode !== "NONE") {
+            context.autoLayout = {
+                mode: frameNode.layoutMode,
+                padding: {
+                    top: frameNode.paddingTop,
+                    right: frameNode.paddingRight,
+                    bottom: frameNode.paddingBottom,
+                    left: frameNode.paddingLeft,
+                },
+                itemSpacing: frameNode.itemSpacing,
+                primaryAxisAlignItems: frameNode.primaryAxisAlignItems,
+                counterAxisAlignItems: frameNode.counterAxisAlignItems,
+                primaryAxisSizingMode: frameNode.primaryAxisSizingMode,
+                counterAxisSizingMode: frameNode.counterAxisSizingMode,
+                layoutWrap: frameNode.layoutWrap,
+            };
+        }
+    }
+
+    // Constraints
+    if ("constraints" in node) {
+        context.constraints = node.constraints;
+    }
+
+    // Component Instance Info
+    if (node.type === "INSTANCE") {
+        const instanceNode = node as InstanceNode;
+        if (instanceNode.mainComponent) {
+            context.component = {
+                mainComponentId: instanceNode.mainComponent.id,
+                mainComponentName: instanceNode.mainComponent.name,
+                mainComponentKey: instanceNode.mainComponent.key,
+            };
+        }
+        // Get overridden properties if any
+        try {
+            const overrides = instanceNode.overrides;
+            if (overrides && overrides.length > 0) {
+                context.overrides = overrides.slice(0, 10).map((o) => ({
+                    id: o.id,
+                    overriddenFields: o.overriddenFields,
+                }));
+            }
+        } catch (e) {
+            // Overrides may not be accessible
+        }
+    }
+
+    // Component Info
+    if (node.type === "COMPONENT") {
+        const componentNode = node as ComponentNode;
+        context.component = {
+            key: componentNode.key,
+            description: componentNode.description,
+        };
+    }
+
+    // Variable Bindings
+    if ("boundVariables" in node) {
+        try {
+            const boundVars: Record<string, unknown> = {};
+            const bound = node.boundVariables as Record<string, VariableAlias>;
+            for (const [key, alias] of Object.entries(bound)) {
+                if (alias) {
+                    boundVars[key] = {
+                        variableId: alias.id,
+                    };
+                }
+            }
+            if (Object.keys(boundVars).length > 0) {
+                context.boundVariables = boundVars;
+            }
+        } catch (e) {
+            // Variables may not be accessible
+        }
+    }
+
+    // Children count (for containers)
+    if ("children" in node) {
+        context.childCount = node.children.length;
+    }
+
+    return context;
+}
+
+// Convert RGB color to hex
+function rgbToHex(r: number, g: number, b: number): string {
+    const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+}
+
+// Convert paint to context-friendly format with hex colors
+function paintToContext(paint: Paint): Record<string, unknown> {
+    const result: Record<string, unknown> = {
+        type: paint.type,
+        visible: paint.visible !== false,
+        opacity: paint.opacity ?? 1,
+    };
+
+    if (paint.type === "SOLID") {
+        result.color = {
+            hex: rgbToHex(paint.color.r, paint.color.g, paint.color.b),
+            rgb: { r: paint.color.r, g: paint.color.g, b: paint.color.b },
+        };
+    } else if (
+        paint.type === "GRADIENT_LINEAR" ||
+        paint.type === "GRADIENT_RADIAL" ||
+        paint.type === "GRADIENT_ANGULAR" ||
+        paint.type === "GRADIENT_DIAMOND"
+    ) {
+        result.gradientStops = paint.gradientStops.map((stop) => ({
+            position: stop.position,
+            color: {
+                hex: rgbToHex(stop.color.r, stop.color.g, stop.color.b),
+                rgb: { r: stop.color.r, g: stop.color.g, b: stop.color.b },
+                a: stop.color.a,
+            },
+        }));
+    } else if (paint.type === "IMAGE") {
+        result.scaleMode = paint.scaleMode;
+        result.imageHash = paint.imageHash;
+    }
+
+    return result;
+}
+
+// Convert effect to context-friendly format
+function effectToContext(effect: Effect): Record<string, unknown> {
+    const result: Record<string, unknown> = {
+        type: effect.type,
+        visible: effect.visible,
+    };
+
+    if (effect.type === "DROP_SHADOW" || effect.type === "INNER_SHADOW") {
+        result.color = {
+            hex: rgbToHex(effect.color.r, effect.color.g, effect.color.b),
+            rgba: effect.color,
+        };
+        result.offset = effect.offset;
+        result.radius = effect.radius;
+        result.spread = effect.spread;
+        result.blendMode = effect.blendMode;
+    } else if (effect.type === "LAYER_BLUR" || effect.type === "BACKGROUND_BLUR") {
+        result.radius = effect.radius;
+    }
+
+    return result;
+}
+
+// ============================================================================
+// Export Node Image - Screenshot as Base64
+// ============================================================================
+
+async function handleExportNodeImage(
+    requestId: string,
+    nodeId: string | undefined,
+    scale: number,
+    format: string
+) {
+    try {
+        // Find the target node
+        let targetNode: SceneNode | null = null;
+
+        if (nodeId) {
+            targetNode = figma.getNodeById(nodeId) as SceneNode | null;
+        } else {
+            // Use first selected node
+            targetNode = figma.currentPage.selection[0] || null;
+        }
+
+        if (!targetNode) {
+            figma.ui.postMessage({
+                type: "execution_result",
+                requestId,
+                result: { error: "No node found. Provide a nodeId or select a node." },
+            });
+            return;
+        }
+
+        // Validate scale
+        const clampedScale = Math.max(1, Math.min(4, scale));
+
+        // Export the node
+        const exportFormat = format.toUpperCase() === "JPG" ? "JPG" : "PNG";
+        const bytes = await targetNode.exportAsync({
+            format: exportFormat,
+            scale: clampedScale,
+        } as ExportSettingsImage);
+
+        // Convert to base64
+        const base64 = uint8ArrayToBase64(bytes);
+
+        // Get dimensions
+        const width = "width" in targetNode ? Math.round(targetNode.width * clampedScale) : 0;
+        const height = "height" in targetNode ? Math.round(targetNode.height * clampedScale) : 0;
+
+        figma.ui.postMessage({
+            type: "execution_result",
+            requestId,
+            result: {
+                nodeId: targetNode.id,
+                nodeName: targetNode.name,
+                format: exportFormat.toLowerCase(),
+                scale: clampedScale,
+                width,
+                height,
+                base64,
+            },
+        });
+    } catch (error) {
+        sendError(requestId, error, "export_node_image");
+    }
+}
+
+// Convert Uint8Array to base64 string
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+    let binary = "";
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
 }

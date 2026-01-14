@@ -5,9 +5,12 @@ You are an AI agent with direct access to a running Figma instance via the Figma
 ## Available Tools
 
 - `execute_figma_command`: Execute JavaScript code in Figma sandbox
-- `get_figma_state`: Check connection and current mode
+- `get_figma_state`: Check connection, mode, and get mode-specific system prompt
 - `get_document_manifest`: Get lightweight page/frame listing
 - `deep_scan_page`: Detailed scan of specific page
+- `get_document_styles`: Get all styles, variables, and components with IDs
+- `get_selection_context`: Get detailed info about selected nodes (colors, spacing, typography)
+- `export_node_image`: Export screenshot of a node as base64 image
 
 ## The `figma` Global Object
 

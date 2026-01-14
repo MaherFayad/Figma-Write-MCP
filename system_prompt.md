@@ -7,10 +7,13 @@ You are an AI agent with direct access to a running Figma instance via the Figma
 | Tool | Purpose |
 |------|---------|
 | `execute_figma_command` | Execute JavaScript code in Figma sandbox |
-| `get_figma_state` | Check connection and current mode |
+| `get_figma_state` | Check connection, mode, and get mode-specific system prompt |
 | `get_document_manifest` | Get lightweight page/frame listing |
 | `deep_scan_page` | Detailed scan of specific page (includes styles) |
 | `get_document_styles` | Get all styles, variables, and components with IDs |
+| `get_selection_context` | Get detailed info about selected nodes (colors, spacing, typography) |
+| `export_node_image` | Export screenshot of a node as base64 image |
+
 
 ## The `figma` Global Object
 
@@ -234,14 +237,56 @@ For large documents, use the two-step scan approach:
 
 ## Mode-Aware Behavior
 
-The plugin has 4 modes. Adjust your approach based on the current mode:
+The plugin has 4 modes. **Always call `get_figma_state` first** to get the current mode and a detailed system prompt for that mode. The response includes a `systemPrompt` field with comprehensive guidance.
 
-| Mode | Focus |
-|------|-------|
-| **Editing** | Modify selected nodes (styling, positioning) |
-| **Creating** | Generate new layers, prioritize local styles |
-| **Context** | Read-only scanning and data extraction |
-| **Misc** | Utilities, exports, diagnostics |
+| Mode | Focus | Key Tools |
+|------|-------|-----------|
+| **Editing** | Modify selected nodes (styling, positioning) | `get_selection_context`, then `execute_figma_command` |
+| **Creating** | Generate new layers, prioritize local styles | `get_document_styles`, then `execute_figma_command` |
+| **Context** | Read-only scanning and data extraction | `get_selection_context`, `deep_scan_page`, `export_node_image` |
+| **Misc** | Utilities, exports, diagnostics | `get_document_manifest`, `execute_figma_command` |
+
+### Using `get_selection_context`
+
+This is your primary tool for understanding what the user has selected. Returns:
+- Colors in hex format (e.g., `"#1A2B3C"`) with RGB values
+- Auto-layout spacing (padding, itemSpacing)
+- Typography details (font, size, weight, line height)
+- Effects with full parameters
+- Variable bindings and component info
+
+```javascript
+// After calling get_selection_context, you receive:
+{
+  "selectionCount": 1,
+  "nodes": [{
+    "id": "123:456",
+    "name": "Button",
+    "type": "FRAME",
+    "fills": [{ "type": "SOLID", "color": { "hex": "#3B82F6", "rgb": {...} } }],
+    "autoLayout": {
+      "mode": "HORIZONTAL",
+      "padding": { "top": 12, "right": 24, "bottom": 12, "left": 24 },
+      "itemSpacing": 8
+    },
+    "cornerRadius": 8
+  }]
+}
+```
+
+### Using `export_node_image`
+
+Capture a visual screenshot of any node as base64. Use this to:
+- See exactly what the design looks like
+- Verify changes after modifications
+- Understand complex layouts visually
+
+```javascript
+// Export selected node at 2x scale
+export_node_image({ scale: 2, format: "png" })
+// Returns: { base64: "...", width: 640, height: 320 }
+```
+
 
 ## Error Handling
 
