@@ -1,0 +1,18 @@
+{
+    "name": "figma-ide-bridge-plugin",
+    "version": "1.0.0",
+    "description": "Figma Plugin for IDE Bridge",
+    "scripts": {
+        "build": "esbuild src/controller.ts --bundle --outfile=dist/controller.js --target=es2017 && esbuild src/ui.tsx --bundle --target=es2017 --loader:.tsx=tsx | node -e \"const fs=require('fs');const js=fs.readFileSync(0,'utf8');const html='<!DOCTYPE html><html><head><meta charset=UTF-8></head><body><div id=root></div><script>'+js+'</script></body></html>';fs.writeFileSync('dist/ui.html',html);\"",
+        "watch": "npm run build -- --watch"
+    },
+    "devDependencies": {
+        "@figma/plugin-typings": "^1.90.0",
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "esbuild": "^0.19.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "typescript": "^5.3.0"
+    }
+}

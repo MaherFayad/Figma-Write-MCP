@@ -1,0 +1,183 @@
+# Figma IDE Bridge - Cursor Rules
+
+You are an AI agent with direct access to a running Figma instance via the Figma Plugin API. You can execute JavaScript code inside the Figma sandbox to read, modify, and create design elements.
+
+## Available Tools
+
+- `execute_figma_command`: Execute JavaScript code in Figma sandbox
+- `get_figma_state`: Check connection and current mode
+- `get_document_manifest`: Get lightweight page/frame listing
+- `deep_scan_page`: Detailed scan of specific page
+
+## The `figma` Global Object
+
+When executing code via `execute_figma_command`, you have access to the `figma` global object (Figma Plugin API). Key properties:
+
+- `figma.currentPage` - Current active page
+- `figma.root` - Document root (contains all pages)
+- `figma.currentPage.selection` - Array of currently selected nodes
+
+## Code Execution Rules
+
+1. **Always `await` async operations:**
+   ```javascript
+   // ✅ Correct
+   await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+   
+   // ❌ Wrong - font may not be loaded
+   figma.loadFontAsync({ family: "Inter", style: "Regular" });
+   ```
+
+2. **Return values explicitly:**
+   ```javascript
+   // Return the last expression to get it back
+   figma.currentPage.selection[0]?.name
+   ```
+
+3. **Handle missing selections gracefully:**
+   ```javascript
+   const node = figma.currentPage.selection[0];
+   if (!node) return { error: "No node selected" };
+   ```
+
+## Common Operations
+
+### Reading Selected Nodes
+```javascript
+const selection = figma.currentPage.selection;
+return selection.map(node => ({
+  id: node.id,
+  name: node.name,
+  type: node.type
+}));
+```
+
+### Modifying Node Properties
+```javascript
+const node = figma.currentPage.selection[0];
+if (node && "fills" in node) {
+  node.fills = [{
+    type: "SOLID",
+    color: { r: 1, g: 0, b: 0 }
+  }];
+}
+return "Fill changed to red";
+```
+
+### Creating New Elements
+```javascript
+const rect = figma.createRectangle();
+rect.name = "New Rectangle";
+rect.resize(100, 100);
+rect.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.4, b: 1 } }];
+figma.currentPage.appendChild(rect);
+return rect.id;
+```
+
+### Working with Text
+```javascript
+await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+const text = figma.createText();
+text.characters = "Hello World";
+text.fontSize = 24;
+figma.currentPage.appendChild(text);
+return text.id;
+```
+
+## Style Handling Best Practices
+
+### Check for Existing Styles Before Creating
+Always check if a style exists before creating a new one:
+
+```javascript
+// Check if color style exists
+const existingStyle = figma.getLocalPaintStyles()
+  .find(s => s.name === "Primary/Blue");
+
+if (existingStyle) {
+  node.fillStyleId = existingStyle.id;
+  return "Used existing style";
+} else {
+  const newStyle = figma.createPaintStyle();
+  newStyle.name = "Primary/Blue";
+  newStyle.paints = [{ type: "SOLID", color: { r: 0, g: 0.4, b: 1 } }];
+  node.fillStyleId = newStyle.id;
+  return "Created new style";
+}
+```
+
+### Check for Existing Variables
+```javascript
+const collections = await figma.variables.getLocalVariableCollectionsAsync();
+const existingVar = await figma.variables.getLocalVariablesAsync()
+  .then(vars => vars.find(v => v.name === "spacing/md"));
+
+if (existingVar) {
+  return { found: true, id: existingVar.id };
+}
+```
+
+## Smart Scanning Workflow
+
+For large documents, use the two-step scan approach:
+
+1. **First: Get the manifest** (lightweight)
+   - Call: `get_document_manifest`
+   - Returns: List of pages with top-level frames
+
+2. **Then: Deep scan specific pages**
+   - Call: `deep_scan_page` with pageId from manifest
+   - Returns: Full node tree for that page
+
+## Mode-Aware Behavior
+
+The plugin has 4 modes. Adjust your approach based on the current mode:
+
+- **Editing**: Modify selected nodes (styling, positioning)
+- **Creating**: Generate new layers, prioritize local styles
+- **Context**: Read-only scanning and data extraction
+- **Misc**: Utilities, exports, diagnostics
+
+Always check the current mode using `get_figma_state()` before executing operations.
+
+## Error Handling
+
+If your code throws an error, you'll receive the error message and stack trace. Common fixes:
+
+- `Cannot read property of undefined` → Check if node exists before accessing
+- `Font not loaded` → Call `await figma.loadFontAsync(...)` first
+- `Cannot change property on instance` → Use `node.detachInstance()` or modify the main component
+- `Selection is empty` → Ask user to select a node first
+
+## Complete Workflow Example
+
+```javascript
+// 1. Check connection
+const state = await get_figma_state();
+if (!state.connected) return "Plugin not connected";
+
+// 2. Get manifest
+const manifest = await get_document_manifest();
+console.log(`Document: ${manifest.documentName}`);
+
+// 3. Deep scan first page
+const pageData = await deep_scan_page({ pageId: manifest.pages[0].id });
+
+// 4. Execute modifications
+await execute_figma_command({
+  code: `
+    const node = figma.currentPage.selection[0];
+    if (node) node.name = "Renamed by Agent";
+    return node?.name;
+  `
+});
+```
+
+## General Guidelines
+
+- Always check plugin connection state before executing commands
+- Use defensive programming - check for null/undefined before accessing properties
+- Prefer using existing styles and variables over creating new ones
+- For text operations, always load fonts asynchronously first
+- Return meaningful values or status messages from executed code
+- When working with large documents, use the manifest-first approach to avoid performance issues
