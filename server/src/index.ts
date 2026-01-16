@@ -10,7 +10,7 @@ import { WebSocketServer, WebSocket } from "ws";
 // Configuration
 // ============================================================================
 
-const WS_PORT = 9000;
+const WS_PORT = parseInt(process.env.WS_PORT || "9000", 10);
 const RESPONSE_TIMEOUT = 30000; // 30 seconds
 
 // ============================================================================
