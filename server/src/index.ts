@@ -147,18 +147,22 @@ Call this first to verify the connection before executing commands.`,
 
 Returns:
 - availableFonts: List of fonts that can be loaded (family + styles)
-- paintStyles: All color/fill styles (local + library) with IDs and resolved colors
-- textStyles: All text styles with font info, sizes, and IDs
-- effectStyles: All effect styles (shadows, blur)
-- components: All available components with IDs and keys
-- variables: All design tokens/variables with resolved values
+- paintStyles: Local color/fill styles with IDs and resolved colors
+- textStyles: Local text styles with font info, sizes, and IDs
+- effectStyles: Local effect styles (shadows, blur)
+- components: Local components with IDs and keys
+- variables: Local design tokens/variables with resolved values
+- libraryVariableCollections: Variable collections from linked libraries
+- usedStyles: ALL styles used in the document (local + library) with full details
+- libraryComponents: Library components found via instances in the document
 - selection: Current selection summary (count, types, basic info)
 
 This gives you everything needed to:
 1. Know which fonts are safe to use
 2. Find existing styles to apply (use style.id)
-3. Find components to instantiate
-4. Understand what's currently selected`,
+3. Find components to instantiate (both local and library)
+4. Understand what's currently selected
+5. Access library styles and components that are in use`,
                 inputSchema: {
                     type: "object",
                     properties: {
@@ -312,6 +316,208 @@ Returns base64 image data, dimensions, and format.`,
                     },
                 },
             },
+            {
+                name: "analyze_patterns",
+                description: `Analyze design patterns used in a Figma page to understand the design system.
+
+**Use this to understand how pages are structured** before creating new pages.
+
+Returns comprehensive pattern analysis including:
+- colors: Top colors used with usage counts and style names
+- typography: Font families and styles with usage counts
+- spacing: Common spacing values and detected scale (4px, 8px base)
+- sizing: Common frame/component dimensions
+- cornerRadius: Common border radius values
+- layout: Auto-layout distribution (horizontal, vertical, none)
+- components: Most used components (local and library)
+- pageStructure: Structural element analysis including:
+  - Headers, navigation, sidebars, footers detected by name/position
+  - Page templates showing top-to-bottom structure of each frame
+  - Component keys for library elements to replicate structure
+
+Use this to ensure new pages follow the same structure and patterns.`,
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        pageId: {
+                            type: "string",
+                            description: "Optional page ID to analyze. If not provided, analyzes current page.",
+                        },
+                    },
+                },
+            },
+            {
+                name: "clone_node",
+                description: `Clone/duplicate a node (frame, component, instance, etc.) to reuse existing patterns.
+
+**Use this to avoid recreating patterns from scratch.** Instead of building from scratch:
+1. Use analyze_patterns to find existing frames with the structure you need
+2. Use clone_node to duplicate them
+3. Modify the cloned node as needed
+
+Parameters:
+- targetNodeId: ID of the node to clone (required)
+- newName: Optional new name for the cloned node
+- offsetX/offsetY: Position offset from original (default: 100px right)
+- targetParentId: Optional parent to place the clone in
+
+Returns the cloned node's ID for further modifications.`,
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        targetNodeId: {
+                            type: "string",
+                            description: "ID of the node to clone",
+                        },
+                        newName: {
+                            type: "string",
+                            description: "Optional new name for the cloned node",
+                        },
+                        offsetX: {
+                            type: "number",
+                            description: "Horizontal offset from original position (default: 100)",
+                        },
+                        offsetY: {
+                            type: "number",
+                            description: "Vertical offset from original position (default: 0)",
+                        },
+                        targetParentId: {
+                            type: "string",
+                            description: "Optional parent node ID to place the clone in",
+                        },
+                    },
+                    required: ["targetNodeId"],
+                },
+            },
+            {
+                name: "scan_presentation",
+                description: `Scan a presentation to identify slides and their editable slots.
+
+**Features:**
+- Auto-classifies slides (cover, toc, separator, content, end)
+- Caches results - subsequent calls return cached data instantly
+- Use forceRescan: true to refresh the cache
+
+Returns for each slide:
+- id, name, classification (cover/toc/separator/content/end)
+- slots: Array of text/image slots with IDs and content
+
+Workflow:
+1. scan_presentation - get structure (cached after first call)
+2. configure_presentation - mark special slides
+3. fill_slide - populate content`,
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        slideId: {
+                            type: "string",
+                            description: "Optional specific slide ID to scan",
+                        },
+                        forceRescan: {
+                            type: "boolean",
+                            description: "Force rescan even if cached data exists",
+                        },
+                    },
+                },
+            },
+            {
+                name: "fill_slide",
+                description: `Fill data into a presentation slide's editable slots.
+
+Workflow:
+1. Use scan_presentation to get the slide structure and slot IDs
+2. Use fill_slide to populate the slots with your content
+
+Parameters:
+- slideId: The slide frame ID
+- slots: Array of objects with slotId and content
+
+Example usage:
+{
+  "slideId": "123:456",
+  "slots": [
+    { "slotId": "123:457", "content": "My Presentation Title" },
+    { "slotId": "123:458", "content": "Subtitle or description" }
+  ]
+}`,
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        slideId: {
+                            type: "string",
+                            description: "The slide frame ID to fill",
+                        },
+                        slots: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    slotId: {
+                                        type: "string",
+                                        description: "The slot node ID from scan_presentation",
+                                    },
+                                    content: {
+                                        type: "string",
+                                        description: "The text content to fill in",
+                                    },
+                                },
+                                required: ["slotId", "content"],
+                            },
+                            description: "Array of slot fills",
+                        },
+                    },
+                    required: ["slideId", "slots"],
+                },
+            },
+            {
+                name: "configure_presentation",
+                description: `Configure which slides are special (cover, ToC, separators, end).
+
+Use this to tell the AI which slides have special purposes:
+- cover: Title/intro slide
+- toc: Table of contents / agenda
+- separators: Section divider slides (array)
+- end: Thank you / closing slide
+
+These IDs are saved in the plugin and used for intelligent filling.`,
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        cover: {
+                            type: "string",
+                            description: "Slide ID for the cover/title slide",
+                        },
+                        toc: {
+                            type: "string",
+                            description: "Slide ID for table of contents",
+                        },
+                        separators: {
+                            type: "array",
+                            items: { type: "string" },
+                            description: "Array of slide IDs for section separators",
+                        },
+                        end: {
+                            type: "string",
+                            description: "Slide ID for end/thank you slide",
+                        },
+                    },
+                },
+            },
+            {
+                name: "get_presentation_cache",
+                description: `Get the cached presentation structure without rescanning.
+
+Returns the cached presentation including:
+- All slides with their classifications
+- All slots per slide
+- User configuration
+
+Use this for fast access to the presentation structure after initial scan.`,
+                inputSchema: {
+                    type: "object",
+                    properties: {},
+                },
+            },
         ],
     };
 });
@@ -446,6 +652,120 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 };
             }
 
+            case "analyze_patterns": {
+                const { pageId } = (args || {}) as { pageId?: string };
+                const result = await sendToPlugin({
+                    type: "analyze_patterns",
+                    pageId,
+                });
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify(result, null, 2),
+                        },
+                    ],
+                };
+            }
+
+            case "clone_node": {
+                const { targetNodeId, newName, offsetX, offsetY, targetParentId } = (args || {}) as {
+                    targetNodeId: string;
+                    newName?: string;
+                    offsetX?: number;
+                    offsetY?: number;
+                    targetParentId?: string;
+                };
+                const result = await sendToPlugin({
+                    type: "clone_node",
+                    targetNodeId,
+                    newName,
+                    offsetX: offsetX ?? 100,
+                    offsetY: offsetY ?? 0,
+                    targetParentId,
+                });
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify(result, null, 2),
+                        },
+                    ],
+                };
+            }
+
+            case "scan_presentation": {
+                const { slideId, forceRescan } = (args || {}) as { slideId?: string; forceRescan?: boolean };
+                const result = await sendToPlugin({
+                    type: "scan_presentation",
+                    slideId,
+                    forceRescan,
+                });
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify(result, null, 2),
+                        },
+                    ],
+                };
+            }
+
+            case "fill_slide": {
+                const { slideId, slots } = (args || {}) as {
+                    slideId: string;
+                    slots: Array<{ slotId: string; content: string }>;
+                };
+                const result = await sendToPlugin({
+                    type: "fill_slide",
+                    slideId,
+                    slots,
+                });
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify(result, null, 2),
+                        },
+                    ],
+                };
+            }
+
+            case "configure_presentation": {
+                const config = (args || {}) as {
+                    cover?: string;
+                    toc?: string;
+                    separators?: string[];
+                    end?: string;
+                };
+                const result = await sendToPlugin({
+                    type: "configure_presentation",
+                    presentationConfig: config,
+                });
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify(result, null, 2),
+                        },
+                    ],
+                };
+            }
+
+            case "get_presentation_cache": {
+                const result = await sendToPlugin({
+                    type: "get_presentation_cache",
+                });
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify(result ?? { success: false, message: "No response" }, null, 2),
+                        },
+                    ],
+                };
+            }
+
             default:
                 throw new Error(`Unknown tool: ${name}`);
         }
@@ -455,7 +775,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             content: [
                 {
                     type: "text",
-                    text: `Error: ${errorMessage}`,
+                    text: JSON.stringify({ error: errorMessage }, null, 2),
                 },
             ],
             isError: true,
