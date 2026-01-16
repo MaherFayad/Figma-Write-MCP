@@ -1427,8 +1427,8 @@ async function handleAnalyzePatterns(requestId: string, pageId?: string) {
                 },
                 layout: {
                     distribution: layoutPatterns,
-                    primaryAxisAlignment: Object.fromEntries(alignmentPatterns.primaryAxis),
-                    counterAxisAlignment: Object.fromEntries(alignmentPatterns.counterAxis),
+                    primaryAxisAlignment: mapToObject(alignmentPatterns.primaryAxis),
+                    counterAxisAlignment: mapToObject(alignmentPatterns.counterAxis),
                 },
                 components: {
                     mostUsed: sortedComponents,
@@ -1472,6 +1472,15 @@ function detectSpacingScale(values: number[]): string | null {
         }
     }
     return null;
+}
+
+// Helper to convert Map to Object (Object.fromEntries replacement)
+function mapToObject(map: Map<any, any>): Record<string, any> {
+    const obj: Record<string, any> = {};
+    map.forEach((value, key) => {
+        obj[String(key)] = value;
+    });
+    return obj;
 }
 
 // ============================================================================
