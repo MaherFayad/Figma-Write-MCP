@@ -127,13 +127,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         tools: [
             {
                 name: "get_figma_state",
-                description: `Check if the Figma plugin is connected and ready.
+                description: `Check if requested Figma plugin is connected and ready.
+
+**REQUIRED FOR INITIAL HANDSHAKE**: Call this first to verify the WebSocket tunnel is active before any other calls.
 
 Returns:
-- connected: boolean - Whether the plugin is connected
-- ready: boolean - Whether commands can be executed
-
-Call this first to verify the connection before executing commands.`,
+- connected: boolean
+- ready: boolean`,
                 inputSchema: {
                     type: "object",
                     properties: {},
@@ -141,28 +141,15 @@ Call this first to verify the connection before executing commands.`,
             },
             {
                 name: "get_design_context",
-                description: `Get comprehensive design context from Figma in a single call.
+                description: `Get comprehensive design system tokens and document context.
 
-**ALWAYS CALL THIS FIRST** before creating or modifying elements.
+**MANDATORY FIRST STEP** for all design tasks. Use this to discover:
+1. **Fonts**: Loadable family + style pairs.
+2. **Styles**: Paint/Text/Effect style IDs (node.fillStyleId).
+3. **Variables**: Local and library design tokens.
+4. **Components**: For instantiation without hardcoding.
 
-Returns:
-- availableFonts: List of fonts that can be loaded (family + styles)
-- paintStyles: Local color/fill styles with IDs and resolved colors
-- textStyles: Local text styles with font info, sizes, and IDs
-- effectStyles: Local effect styles (shadows, blur)
-- components: Local components with IDs and keys
-- variables: Local design tokens/variables with resolved values
-- libraryVariableCollections: Variable collections from linked libraries
-- usedStyles: ALL styles used in the document (local + library) with full details
-- libraryComponents: Library components found via instances in the document
-- selection: Current selection summary (count, types, basic info)
-
-This gives you everything needed to:
-1. Know which fonts are safe to use
-2. Find existing styles to apply (use style.id)
-3. Find components to instantiate (both local and library)
-4. Understand what's currently selected
-5. Access library styles and components that are in use`,
+*Avoid hardcoding colors like {r:1, g:0, b:0}; always use style IDs.*`,
                 inputSchema: {
                     type: "object",
                     properties: {

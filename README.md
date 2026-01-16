@@ -53,6 +53,37 @@ Add the MCP server to your IDE configuration:
 -   **Command**: `node [absolute-path-to-repo]/server/dist/index.js`
 -   **Type**: `stdio`
 
+## 🛠️ Tools Reference
+
+The bridge exposes a full suite of tools for design creation, analysis, and presentation management.
+
+### 🔍 Discovery & Context
+- **`get_figma_state`**: Verifies plugin connectivity and readiness.
+- **`get_document_manifest`**: Provides a lightweight tree of pages and top-level frames.
+- **`get_design_context`**: **(Recommended First Call)** Retrieves all local/library styles, variables, components, and current selection details.
+- **`get_selection_context`**: Detailed properties (colors, layout, variables) of currently selected nodes.
+- **`deep_scan_page`**: Exhaustive node-by-node analysis of a specific page.
+
+### 🎨 Design & Manipulation
+- **`execute_figma_command`**: Runs raw JavaScript in the Figma sandbox. Supports `async/await`.
+- **`clone_node`**: Duplicates existing frames or components while preserving structures.
+- **`analyze_patterns`**: Identifies design system usage (spacing, colors, corner radii) to ensure visual consistency.
+- **`export_node_image`**: Captures high-res screenshots for visual verification.
+
+### 📊 Presentation Management
+- **`scan_presentation`**: Auto-classifies slides and identifies editable text/image slots.
+- **`configure_presentation`**: Marks special slides (Cover, ToC, Separators) for intelligent filling.
+- **`fill_slide`**: Populates identified slots with targeted content.
+- **`get_presentation_cache`**: Instant access to previous scan results.
+
+## 📝 Best Practices for AI Agents
+
+1.  **Always use `get_design_context` first**: Never guess style IDs or component keys.
+2.  **No Hardcoding**: Use `node.fillStyleId` or `node.strokeStyleId` with IDs obtained from the context.
+3.  **Font Loading**: Always `await figma.loadFontAsync({ family: "Font", style: "Style" })` before editing text.
+4.  **Auto-Layout**: Set `layoutMode` before adding children, and `layoutSizingHorizontal/Vertical` after appending.
+5.  **Sequential Creation**: Create the container node first, set its properties, then append children.
+
 ## 🛠️ Development
 
 ### Plugin
