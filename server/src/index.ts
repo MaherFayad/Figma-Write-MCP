@@ -5,6 +5,11 @@ import {
     ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { WebSocketServer, WebSocket } from "ws";
+import { exec } from "child_process";
+import { promisify } from "util";
+import * as net from "net";
+
+const execAsync = promisify(exec);
 
 // ============================================================================
 // Configuration
@@ -22,42 +27,140 @@ let pendingRequests: Map<
     string,
     { resolve: (value: unknown) => void; reject: (error: Error) => void }
 > = new Map();
+let wss: WebSocketServer | null = null;
 
 // ============================================================================
-// WebSocket Server
+// Port Management
 // ============================================================================
 
-const wss = new WebSocketServer({ port: WS_PORT });
+async function isPortInUse(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        server.once("error", (err: NodeJS.ErrnoException) => {
+            if (err.code === "EADDRINUSE") {
+                resolve(true);
+            } else {
+                resolve(false);
+            }
+        });
+        server.once("listening", () => {
+            server.close();
+            resolve(false);
+        });
+        server.listen(port);
+    });
+}
 
-console.error(`[MCP Server] WebSocket server listening on port ${WS_PORT}`);
-
-wss.on("connection", (ws: WebSocket) => {
-    console.error("[MCP Server] Figma plugin connected");
-    figmaPlugin = ws;
-
-    ws.on("message", (data: Buffer) => {
-        try {
-            const message = JSON.parse(data.toString());
-            handlePluginMessage(message);
-        } catch (error) {
-            console.error("[MCP Server] Failed to parse message:", error);
+async function killProcessOnPort(port: number): Promise<void> {
+    const isWindows = process.platform === "win32";
+    try {
+        if (isWindows) {
+            // Find and kill process on Windows
+            const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
+            const lines = stdout.trim().split("\n");
+            const pids = new Set<string>();
+            for (const line of lines) {
+                const parts = line.trim().split(/\s+/);
+                const pid = parts[parts.length - 1];
+                if (pid && pid !== "0" && !isNaN(parseInt(pid))) {
+                    pids.add(pid);
+                }
+            }
+            for (const pid of pids) {
+                try {
+                    await execAsync(`taskkill /F /PID ${pid}`);
+                    console.error(`[MCP Server] Killed process ${pid} on port ${port}`);
+                } catch {
+                    // Process may have already exited
+                }
+            }
+        } else {
+            // Unix-like systems
+            await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+            console.error(`[MCP Server] Killed process on port ${port}`);
         }
-    });
+        // Wait a moment for the port to be released
+        await new Promise((resolve) => setTimeout(resolve, 500));
+    } catch {
+        // No process found or other error - that's fine
+    }
+}
 
-    ws.on("close", () => {
-        console.error("[MCP Server] Figma plugin disconnected");
-        figmaPlugin = null;
-        // Reject all pending requests
-        for (const [id, { reject }] of pendingRequests) {
-            reject(new Error("Figma plugin disconnected"));
-            pendingRequests.delete(id);
+async function createWebSocketServer(): Promise<WebSocketServer> {
+    // Check if port is in use
+    if (await isPortInUse(WS_PORT)) {
+        console.error(`[MCP Server] Port ${WS_PORT} is in use, attempting to free it...`);
+        await killProcessOnPort(WS_PORT);
+
+        // Double-check the port is free now
+        if (await isPortInUse(WS_PORT)) {
+            console.error(`[MCP Server] Warning: Port ${WS_PORT} still in use after cleanup attempt`);
         }
-    });
+    }
 
-    ws.on("error", (error: Error) => {
-        console.error("[MCP Server] WebSocket error:", error);
+    return new Promise((resolve, reject) => {
+        const server = new WebSocketServer({ port: WS_PORT });
+
+        server.once("error", async (err: NodeJS.ErrnoException) => {
+            if (err.code === "EADDRINUSE") {
+                console.error(`[MCP Server] Port ${WS_PORT} conflict, retrying...`);
+                await killProcessOnPort(WS_PORT);
+                // Retry once
+                try {
+                    const retryServer = new WebSocketServer({ port: WS_PORT });
+                    retryServer.once("error", (retryErr) => {
+                        reject(retryErr);
+                    });
+                    retryServer.once("listening", () => {
+                        resolve(retryServer);
+                    });
+                } catch (retryErr) {
+                    reject(retryErr);
+                }
+            } else {
+                reject(err);
+            }
+        });
+
+        server.once("listening", () => {
+            resolve(server);
+        });
     });
-});
+}
+
+function setupWebSocketHandlers(server: WebSocketServer): void {
+    server.on("connection", (ws: WebSocket) => {
+        console.error("[MCP Server] Figma plugin connected");
+        figmaPlugin = ws;
+
+        ws.on("message", (data: Buffer) => {
+            try {
+                const message = JSON.parse(data.toString());
+                handlePluginMessage(message);
+            } catch (error) {
+                console.error("[MCP Server] Failed to parse message:", error);
+            }
+        });
+
+        ws.on("close", () => {
+            console.error("[MCP Server] Figma plugin disconnected");
+            figmaPlugin = null;
+            // Reject all pending requests
+            for (const [id, { reject }] of pendingRequests) {
+                reject(new Error("Figma plugin disconnected"));
+                pendingRequests.delete(id);
+            }
+        });
+
+        ws.on("error", (error: Error) => {
+            console.error("[MCP Server] WebSocket error:", error);
+        });
+    });
+}
+
+// ============================================================================
+// WebSocket Server Initialization (deferred to main)
+// ============================================================================
 
 function handlePluginMessage(message: {
     type: string;
@@ -775,6 +878,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // ============================================================================
 
 async function main() {
+    // Initialize WebSocket server first (handles port conflicts)
+    try {
+        wss = await createWebSocketServer();
+        setupWebSocketHandlers(wss);
+        console.error(`[MCP Server] WebSocket server listening on port ${WS_PORT}`);
+    } catch (error) {
+        console.error(`[MCP Server] Failed to start WebSocket server:`, error);
+        process.exit(1);
+    }
+
+    // Start MCP server
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error("[MCP Server] MCP server running on stdio");

@@ -60,8 +60,11 @@ Add the following to your MCP settings (`.cursor/mcp.json` or equivalent):
 {
   "mcpServers": {
     "figma-bridge": {
-      "command": "node",
-      "args": ["C:/path/to/Figma Write MCP/server/dist/index.js"]
+      "command": "npx",
+      "args": [
+        "tsx",
+        "c:/Users/Admin/Documents/GitHub/Figma Write MCP/server/src/index.ts"
+      ]
     }
   }
 }
@@ -75,8 +78,11 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "figma-bridge": {
-      "command": "node",
-      "args": ["C:/path/to/Figma Write MCP/server/dist/index.js"]
+      "command": "npx",
+      "args": [
+        "tsx",
+        "c:/Users/Admin/Documents/GitHub/Figma Write MCP/server/src/index.ts"
+      ]    
     }
   }
 }
