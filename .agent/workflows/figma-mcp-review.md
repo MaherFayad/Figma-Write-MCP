@@ -187,6 +187,52 @@ for (const instance of componentInstances) {
 
 ---
 
+### 4.5 Content & QC Analysis (New)
+
+```javascript
+// Scan for "Ghost" content and Truncation
+const qcViolations = [];
+
+for (const node of scannedNodes) {
+  // 1. Ghost/Placeholder Content
+  const placeholders = ["Lorem Ipsum", "Type here", "Title", "Heading", "Body text"];
+  if (node.type === "TEXT" && node.visible) {
+     if (placeholders.some(p => node.characters.includes(p))) {
+        qcViolations.push({
+           type: 'PLACEHOLDER_TEXT',
+           severity: 'FAIL',
+           nodeId: node.id,
+           actual: node.characters,
+           expected: "Real content"
+        });
+     }
+  }
+
+  // 2. Invisible Pollution
+  if (node.type === "TEXT" && !node.visible) {
+      qcViolations.push({
+          type: 'INVISIBLE_NODE',
+          severity: 'INFO',
+          nodeId: node.id,
+          expected: "Should be removed if unused"
+      });
+  }
+
+  // 3. Truncation / Overflow
+  if (node.type === "TEXT" && node.textAutoResize === "TRUNCATE") {
+      qcViolations.push({
+          type: 'TEXT_TRUNCATION_RISK',
+          severity: 'WARNING',
+          nodeId: node.id,
+          actual: "Truncate mode on",
+          expected: "Ensure text fits"
+      });
+  }
+}
+```
+
+---
+
 ## Step 5: Visual Comparison with Screenshots
 
 ### 5.1 Export Created Design Screenshots
@@ -403,7 +449,11 @@ Create `.figma/reviews/{timestamp}-review.md`:
 | `UNKNOWN_COMPONENT` | Component not from design system | WARNING |
 | `MISSING_FONT_LOAD` | Font used without loading | FAIL |
 | `WRONG_LAYOUT_MODE` | Auto-layout not matching pattern | INFO |
+| `WRONG_LAYOUT_MODE` | Auto-layout not matching pattern | INFO |
 | `ACCESSIBILITY_CONTRAST` | Low contrast text | WARNING |
+| `PLACEHOLDER_TEXT` | "Lorem Ipsum" or similar left behind | FAIL |
+| `INVISIBLE_NODE` | Hidden node cluttering file | INFO |
+| `TEXT_TRUNCATION_RISK` | Text might be cut off | WARNING |
 
 ---
 

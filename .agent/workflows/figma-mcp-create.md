@@ -136,6 +136,14 @@ frame.paddingTop = 24;
 frame.paddingBottom = 24;
 frame.paddingLeft = 24;
 frame.paddingRight = 24;
+
+// ENFORCE: Sizing that respects content
+// If vertical, often want title to auto-wrap but container to grow
+if (frame.layoutMode === "VERTICAL") {
+   frame.layoutSizingVertical = "HUG"; 
+   frame.layoutSizingHorizontal = "FIXED"; // or FILL if inside another frame
+}
+
 ```
 
 ### 5.2 Apply Corner Radius
@@ -319,6 +327,10 @@ pageFrame.appendChild(footer);
 3. Verify layout matches expected patterns
 4. Check style bindings are correct
 5. Validate component instances
+6. **Check for Overflow**: 
+   - Iterate text nodes.
+   - If `text.truncated` is true, or if text bounds exceed parent padding box, warn or auto-resize.
+
 ```
 
 > 💡 **Tip**: Run `/figma-mcp-review` workflow to generate a full compliance report.
