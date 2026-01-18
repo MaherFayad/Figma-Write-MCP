@@ -48,10 +48,41 @@ npm run build
 3.  Select `plugin/manifest.json`.
 4.  Run the plugin. It should show a "Connected" status if the server is running.
 
-### 3. Connect Cursor/IDE
-Add the MCP server to your IDE configuration:
--   **Command**: `node [absolute-path-to-repo]/server/dist/index.js`
--   **Type**: `stdio`
+### 3. MCP Configuration
+
+Add the Figma Bridge MCP server to your IDE's MCP configuration file.
+
+#### Cursor / VS Code
+
+Add the following to your MCP settings (`.cursor/mcp.json` or equivalent):
+
+```json
+{
+  "mcpServers": {
+    "figma-bridge": {
+      "command": "node",
+      "args": ["C:/path/to/Figma Write MCP/server/dist/index.js"]
+    }
+  }
+}
+```
+
+#### Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "figma-bridge": {
+      "command": "node",
+      "args": ["C:/path/to/Figma Write MCP/server/dist/index.js"]
+    }
+  }
+}
+```
+
+> **Note**: Replace `C:/path/to/Figma Write MCP` with the actual absolute path to your cloned repository.
 
 ## 🛠️ Tools Reference
 
