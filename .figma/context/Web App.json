@@ -1,0 +1,111 @@
+{
+    "document": {
+        "name": "Web App",
+        "pages": [
+            {
+                "id": "2037:311",
+                "name": "Page 11"
+            },
+            {
+                "id": "69:783",
+                "name": "Draft"
+            }
+        ]
+    },
+    "designSystem": {
+        "fonts": [
+            {
+                "family": "Inter",
+                "style": "Regular"
+            },
+            {
+                "family": "Inter",
+                "style": "Medium"
+            },
+            {
+                "family": "Inter",
+                "style": "Bold"
+            }
+        ],
+        "paintStyles": [
+            {
+                "id": "S:483e054852f4ed7faf5af1c51db790cbaf499bd1,1102:149",
+                "name": "gray/700",
+                "hex": "#374151"
+            },
+            {
+                "id": "S:af90b367af918250792bac20875bf832aaafe595,9:39",
+                "name": "Semantic/Warning",
+                "hex": "#F59E0B"
+            }
+        ],
+        "textStyles": [],
+        "effectStyles": []
+    },
+    "components": {
+        "local": [],
+        "library": [
+            {
+                "key": "4521017bbde2618648c3f7d1221a4630fa5e31a0",
+                "name": "Input"
+            },
+            {
+                "key": "6210a37bdecc610646b44bac15f6814e73eb9a93",
+                "name": "Button"
+            },
+            {
+                "key": "c2aa4c132722dae74c02b08ef129b4db549b7d52",
+                "name": "Icon Shapes"
+            }
+        ]
+    },
+    "patterns": {
+        "colors": {
+            "topColors": [
+                {
+                    "hex": "#9CA3AF",
+                    "count": 198
+                },
+                {
+                    "hex": "#D1D5DB",
+                    "count": 83
+                },
+                {
+                    "hex": "#0A0E15",
+                    "count": 29
+                }
+            ]
+        },
+        "typography": {
+            "fontFamilies": [
+                {
+                    "family": "Inter",
+                    "count": 120
+                }
+            ]
+        },
+        "spacing": {
+            "scale": [
+                4,
+                8,
+                16,
+                24,
+                32,
+                48,
+                64
+            ],
+            "base": 4
+        },
+        "cornerRadius": {
+            "scale": [
+                0,
+                4,
+                8,
+                12,
+                16,
+                9999
+            ],
+            "mostCommon": 8
+        }
+    }
+}
