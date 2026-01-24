@@ -65,253 +65,108 @@ await figma.loadFontAsync({ family: "Inter", style: "Bold" });
 
 ---
 
-## Step 3: Clone Existing Patterns (The "Gold Standard")
+## Step 3: Clone Existing Patterns ("Gold Standard")
 
 > 🏆 **BEST PRACTICE**: Whenever possible, do NOT create complex UI from scratch. If the context reveals an existing "Card", "Header", or "Section" that matches 80% of what you need, **CLONE IT**!
 
-### Why Clone?
-1.  **Pixel Perfect details**: Captures shadows, exact padding, deeply nested constraints that code might miss.
-2.  **Guaranteed Design System**: By definition, the existing node uses the correct tokens.
-3.  **Faster**: One API call vs 50 calls to build a tree.
+Use `$.clone` to duplicate and tweak:
 
-Use `mcp_figma-bridge_clone_node` to duplicate existing structures:
-
-```
-1. Call clone_node with:
-   - targetNodeId: "existing-frame-id" (from context)
-   - newName: "Cloned Frame"
-   - offsetX: 100
-   - targetParentId: "parent-frame-id" (optional)
-
-2. Modify the cloned node as needed
-3. Update text content, swap component instances
+```javascript
+/* 
+   Clone "Product Card" and update:
+   - "Title" text -> "New Item"
+   - "Price" text -> "$99"
+   - "Buy Button" fill -> "Brand/Secondary"
+*/
+await $.clone("123:456", {
+    "Title": { text: "New Item" },
+    "Price": { text: "$99" },
+    "Buy Button": { fill: "Brand/Secondary" }
+});
 ```
 
 ---
 
-## Step 4: Create Page or Frame (Fallback/New)
+## Step 4: Create Declarative UIs (The New Standard)
 
-### 4.1 Create New Page
+For new structures, use the `$.create` helper. It handles:
+- **Auto-Layout**: Just pass `layout: "VERTICAL"`
+- **Styles**: Pass names like `fill: "Surface/Card"` (fuzzy matched)
+- **Fonts**: Automatically loaded
+
+### 4.1 Create Page & Frame
 
 ```javascript
-// Execute via mcp_figma-bridge_execute_figma_command
+// 1. Create Page
 const newPage = figma.createPage();
-newPage.name = "New Page Name";
+newPage.name = "Dashboard";
 figma.currentPage = newPage;
-return { pageId: newPage.id, name: newPage.name };
-```
 
-### 4.2 Create Frame on Current Page
-
-```javascript
-const frame = figma.createFrame();
-frame.name = "Frame Name";
-frame.resize(1440, 900); // Desktop size from patterns
-frame.x = 0;
-frame.y = 0;
-
-// Apply background using style ID from context (PREFERRED)
-// const bgStyleId = context.lookup.styles["Background"];
-if (bgStyleId) frame.fillStyleId = bgStyleId;
-
-figma.currentPage.appendChild(frame);
-return { frameId: frame.id };
+// 2. Create Layout
+const screen = await $.create("FRAME", {
+    name: "Dashboard Screen",
+    width: 1440,
+    height: 1024,
+    fill: "Background/Page", // Fuzzy finds style ID
+    layout: "VERTICAL",
+    gap: 0
+});
+figma.currentPage.appendChild(screen);
+return { frameId: screen.id };
 ```
 
 ---
 
-## Step 5: Apply Design Patterns
+## Step 5: Build Components with Nesting
 
-### 5.1 Apply Auto-Layout
+Nest `$.create` calls to build complex UIs in one go.
 
-```javascript
-// Set layout mode BEFORE adding children
-frame.layoutMode = "VERTICAL"; // or "HORIZONTAL"
-frame.primaryAxisSizingMode = "AUTO"; // or "FIXED"
-frame.counterAxisSizingMode = "AUTO"; // or "FIXED"
-frame.primaryAxisAlignItems = "MIN"; // MIN, CENTER, MAX, SPACE_BETWEEN
-frame.counterAxisAlignItems = "CENTER"; // MIN, CENTER, MAX, STRETCH
-frame.itemSpacing = 16; // From spacing scale
-frame.paddingTop = 24;
-frame.paddingBottom = 24;
-frame.paddingLeft = 24;
-frame.paddingRight = 24;
-
-// ENFORCE: Sizing that respects content
-// If vertical, often want title to auto-wrap but container to grow
-if (frame.layoutMode === "VERTICAL") {
-   frame.layoutSizingVertical = "HUG"; 
-   frame.layoutSizingHorizontal = "FIXED"; // or FILL if inside another frame
-}
-
-```
-
-### 5.2 Apply Corner Radius
+### 5.1 Header & Hero Example
 
 ```javascript
-// Use values from pattern analysis
-frame.cornerRadius = 16; // Cards: 16px
-// Or individual corners:
-frame.topLeftRadius = 16;
-frame.topRightRadius = 16;
-frame.bottomLeftRadius = 0;
-frame.bottomRightRadius = 0;
+// Add to 'screen' from above
+const header = await $.create("FRAME", {
+    name: "Header",
+    width: "FILL",
+    height: "HUG",
+    layout: "HORIZONTAL",
+    pad: [16, 32], // Vertical: 16, Horizontal: 32
+    path: "between", // Primary axis: space-between
+    fill: "Surface/Header", 
+    effect: "Shadow/Small"
+}, [
+    $.create("TEXT", { text: "Logo", font: "H3", fill: "Brand/Primary" }),
+    $.create("FRAME", { layout: "HORIZONTAL", gap: 16 }, [
+        $.create("TEXT", { text: "Home", font: "Body", fill: "Text/Primary" }),
+        $.create("TEXT", { text: "About", font: "Body", fill: "Text/Secondary" })
+    ])
+]);
+screen.appendChild(header);
+
+const hero = await $.create("FRAME", {
+    name: "Hero",
+    width: "FILL",
+    height: "HUG",
+    layout: "VERTICAL",
+    pad: 64,
+    gap: 24,
+    align: "center", // Align items center
+    fill: "Surface/Hero"
+}, [
+    $.create("TEXT", { text: "Build Faster", font: "Display/H1", fill: "Text/Primary" }),
+    $.create("TEXT", { text: "Use the declarative engine.", font: "Body/Large", fill: "Text/Secondary" }),
+    $.create("FRAME", { 
+        name: "CTA Button",
+        fill: "Brand/Primary",
+        corner: 8,
+        pad: [12, 24] 
+    }, [
+        $.create("TEXT", { text: "Get Started", font: "Button/Medium", fill: "Text/Inverse" })
+    ])
+]);
+screen.appendChild(hero);
 ```
 
-### 5.3 Apply Effects (Shadows)
-
-```javascript
-const shadowStyle = figma.getLocalEffectStyles().find(s => s.id === "S:shadowMdId");
-if (shadowStyle) frame.effectStyleId = shadowStyle.id;
-```
-
----
-
-## Step 6: Create Common Elements
-
-### 6.1 Create Text Node
-
-```javascript
-// Font MUST be loaded first!
-// Use dynamic font from context if possible
-const font = context.designSystem.fonts[0] || { family: "Inter", style: "Medium" };
-await figma.loadFontAsync(font);
-
-const text = figma.createText();
-text.characters = "Heading Text";
-
-// Apply text style by ID (PREFERRED)
-// const headingStyleId = context.lookup.styles["H1"];
-if (headingStyleId) {
-  text.textStyleId = headingStyleId;
-} else {
-  // FALLBACK ONLY
-  text.fontSize = 24;
-  text.fontName = font;
-}
-
-// Apply color style by ID
-if (textColorId) text.fillStyleId = textColorId;
-
-parentFrame.appendChild(text);
-```
-
-### 6.2 Create Rectangle/Shape
-
-```javascript
-const rect = figma.createRectangle();
-rect.name = "Card Background";
-rect.resize(320, 200);
-rect.cornerRadius = 16;
-
-// Apply fill style by ID
-// const cardBgId = context.lookup.styles["Surface"];
-if (cardBgId) rect.fillStyleId = cardBgId;
-
-parentFrame.appendChild(rect);
-```
-
-### 6.3 Instance Component
-
-```javascript
-// Import component by key from context
-const componentKey = "abc123def456"; // From context JSON
-const component = await figma.importComponentByKeyAsync(componentKey);
-const instance = component.createInstance();
-
-// Position and customize
-instance.x = 0;
-instance.y = 0;
-
-// Override text in instance
-const textNode = instance.findOne(n => n.type === "TEXT" && n.name === "Label");
-if (textNode) {
-  await figma.loadFontAsync(textNode.fontName);
-  textNode.characters = "Custom Label Text";
-}
-
-parentFrame.appendChild(instance);
-```
-
----
-
-## Step 7: Build Page Sections
-
-### 7.1 Header Section
-
-```javascript
-const header = figma.createFrame();
-header.name = "Header";
-header.layoutMode = "HORIZONTAL";
-header.resize(1440, 64); // From patterns
-header.counterAxisAlignItems = "CENTER";
-header.paddingLeft = 24;
-header.paddingRight = 24;
-header.itemSpacing = 16;
-
-// Apply header background style by ID
-if (headerBgStyleId) header.fillStyleId = headerBgStyleId;
-
-// Add logo, nav items, etc.
-pageFrame.appendChild(header);
-```
-
-### 7.2 Hero Section
-
-```javascript
-const hero = figma.createFrame();
-hero.name = "Hero";
-hero.layoutMode = "VERTICAL";
-hero.resize(1440, 500);
-hero.primaryAxisAlignItems = "CENTER";
-hero.counterAxisAlignItems = "CENTER";
-hero.itemSpacing = 24;
-hero.paddingTop = 64;
-hero.paddingBottom = 64;
-
-// Add heading, subheading, CTA button
-pageFrame.appendChild(hero);
-```
-
-### 7.3 Content Grid
-
-```javascript
-const contentGrid = figma.createFrame();
-contentGrid.name = "Content Grid";
-contentGrid.layoutMode = "HORIZONTAL";
-contentGrid.layoutWrap = "WRAP";
-contentGrid.resize(1200, 600);
-contentGrid.itemSpacing = 24;
-contentGrid.counterAxisSpacing = 24;
-contentGrid.paddingTop = 48;
-contentGrid.paddingBottom = 48;
-
-// Add cards using component instances
-for (let i = 0; i < 6; i++) {
-  const cardInstance = cardComponent.createInstance();
-  contentGrid.appendChild(cardInstance);
-}
-
-pageFrame.appendChild(contentGrid);
-```
-
-### 7.4 Footer Section
-
-```javascript
-const footer = figma.createFrame();
-footer.name = "Footer";
-footer.layoutMode = "HORIZONTAL";
-footer.resize(1440, 200);
-footer.primaryAxisAlignItems = "SPACE_BETWEEN";
-footer.counterAxisAlignItems = "MIN";
-footer.paddingTop = 48;
-footer.paddingBottom = 48;
-footer.paddingLeft = 64;
-footer.paddingRight = 64;
-
-// Add footer columns
-pageFrame.appendChild(footer);
-```
 
 ---
 

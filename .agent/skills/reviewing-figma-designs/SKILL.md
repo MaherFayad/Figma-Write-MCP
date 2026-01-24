@@ -247,7 +247,7 @@ Rate each heuristic: ✅ Pass | ⚠️ Needs Work | ❌ Fail
 - [ ] Primary accent used consistently
 - [ ] Sufficient text contrast
 - [ ] Semantic colors (success/error/warning)
-- [ ] No color-only information
+- [ ] **Consistency Score > 90%** (Check `analyze_patterns` output)
 
 ### 4.4 Spacing & Layout
 - [ ] Consistent spacing system (4px/8px grid)

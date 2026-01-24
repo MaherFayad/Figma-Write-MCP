@@ -100,145 +100,88 @@ const inputBg = styles.find(s => s.name === "Greyscale/25");
 
 ---
 
-## Complete Screen Template
+## ⚡ Fast Creation with `$` Helper
 
-Use this template for creating screens:
+The plugin injects a `$` helper object to make creation declarative and fast.
+
+### `$.create(type, props, children)`
+
+Creates a node with auto-layout, style fuzzy-matching, and auto-font loading.
 
 ```javascript
-// 1. LOAD FONTS FIRST
-await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
+const screen = await $.create("FRAME", {
+    name: "Dashboard",
+    layout: "VERTICAL",
+    fill: "Surface/White", // Fuzzy matches "Surface/White" style
+    width: 393,
+    gap: 24,
+    pad: 24
+}, [
+    // Header
+    $.create("FRAME", { layout: "HORIZONTAL", gap: "AUTO", width: "FILL" }, [
+        $.create("TEXT", { text: "Dashboard", font: "H1", fill: "Text/Primary" }),
+        $.create("TEXT", { text: "Jan 20", font: "Body/Small", fill: "Text/Secondary" })
+    ]),
 
-// 2. GET ALL STYLES
-const paintStyles = figma.getLocalPaintStyles();
-const textStyles = figma.getLocalTextStyles();
+    // Card Component
+    $.create("FRAME", {
+        layout: "VERTICAL",
+        fill: "Surface/Card",
+        corner: 12,
+        pad: 16,
+        gap: 8,
+        effect: "Shadow/Small", // Applies effect style
+        width: "FILL"
+    }, [
+        $.create("TEXT", { text: "Revenue", font: "H3", fill: "Text/Primary" }),
+        $.create("TEXT", { text: "$12,450", font: "H1", fill: "Brand/Primary" })
+    ])
+]);
+```
 
-// 3. MAP STYLES BY PURPOSE (adjust names to match your file)
-const findPaint = (name) => paintStyles.find(s => s.name === name);
-const findText = (name) => textStyles.find(s => s.name.includes(name));
+### `$.clone(targetId, overrides)`
 
-const $ = {
-    // Colors
-    primary: findPaint("Primary/300"),
-    primaryDark: findPaint("Primary/500"),
-    textDark: findPaint("Greyscale/500"),
-    textMuted: findPaint("Greyscale/100"),
-    inputBg: findPaint("Greyscale/25"),
-    border: findPaint("Greyscale/50"),
-    white: findPaint("Greyscale/0"),
-    // Typography  
-    heading: findText("Heading"),
-    bodyMedium: findText("Body/Medium/Medium"),
-    bodyRegular: findText("Body/Medium/Regular"),
-    bodySmall: findText("Body/Small/Regular"),
-};
+Clone an existing node and update specific children by name. The BEST way to ensure consistency.
 
-// 4. CREATE SCREEN FRAME
-const screen = figma.createFrame();
-screen.name = "My Screen";
-screen.resize(393, 852);
-if ($.white) screen.fillStyleId = $.white.id;
-screen.layoutMode = "VERTICAL";
-screen.paddingTop = 60;
-screen.paddingBottom = 34;
-screen.paddingLeft = 24;
-screen.paddingRight = 24;
-screen.itemSpacing = 16;
+```javascript
+// Clone the "Contact Form" and update text/styles
+await $.clone("12:345", {
+    "Title": { text: "Edit Profile" },            // Text update
+    "Submit Button": { fill: "Brand/Success" },   // Style update
+    "Cancel": { visible: true },                  // Property update
+    "Hero Image": { fill: "#F5F5F5" }             // Hex override
+});
+```
 
-// 5. ADD ELEMENTS USING STYLES
-const title = figma.createText();
-title.fontName = { family: "Inter", style: "Semi Bold" };
-title.fontSize = 28;
-title.characters = "Screen Title";
-if ($.textDark) title.fillStyleId = $.textDark.id;
-screen.appendChild(title);
+### `$.modify(node, props)`
 
-// 6. ADD TO PAGE
-figma.currentPage.appendChild(screen);
-figma.currentPage.selection = [screen];
-figma.viewport.scrollAndZoomIntoView([screen]);
+Update any node with the same smart properties.
 
-return { success: true, id: screen.id };
+```javascript
+await $.modify(node, {
+    fill: "Error/500",
+    layout: "HORIZONTAL",
+    gap: 12
+});
 ```
 
 ---
 
-## Auto-Layout Rules (MUST follow order)
+## Smart Property Reference
 
-```javascript
-// 1. Create parent frame
-const container = figma.createFrame();
-
-// 2. Set layout BEFORE children
-container.layoutMode = "VERTICAL";
-container.primaryAxisSizingMode = "AUTO";
-container.counterAxisSizingMode = "AUTO";
-container.itemSpacing = 8;
-container.paddingTop = container.paddingBottom = 16;
-container.paddingLeft = container.paddingRight = 16;
-
-// 3. Create child
-const child = figma.createFrame();
-child.resize(100, 50);
-
-// 4. Append child
-container.appendChild(child);
-
-// 5. Set child sizing AFTER append
-child.layoutSizingHorizontal = "FILL";
-```
+| Prop | Accepts | Behavior |
+|------|---------|----------|
+| `fill` | `"Primary/500"` or `"#FF0000"` | Finds style by name OR sets hex |
+| `stroke` | `"Grey/200"` | Finds stroke style |
+| `font` | `"Heading/H1"` | Finds text style OR sets font family (if matches) |
+| `layout` | `"VERTICAL", "HORIZONTAL"` | Sets `layoutMode` |
+| `gap` | `16` | Sets `itemSpacing` |
+| `pad` | `16` or `[20, 10]` | Sets padding (all or [y, x]) |
+| `corner` | `8` | Sets `cornerRadius` |
+| `width` | `"FILL"`, `"HUG"`, `300` | Sets `layoutSizingHorizontal` |
+| `height` | `"FILL"`, `"HUG"`, `200` | Sets `layoutSizingVertical` |
 
 ---
-
-## Common Components
-
-### Primary Button
-```javascript
-const btn = figma.createFrame();
-btn.name = "Primary Button";
-btn.resize(200, 56);
-btn.cornerRadius = 100;  // Pill shape
-btn.layoutMode = "HORIZONTAL";
-btn.primaryAxisAlignItems = "CENTER";
-btn.counterAxisAlignItems = "CENTER";
-if ($.primary) btn.fillStyleId = $.primary.id;
-
-await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
-const label = figma.createText();
-label.fontName = { family: "Inter", style: "Semi Bold" };
-label.fontSize = 16;
-label.characters = "Button Text";
-if ($.white) label.fillStyleId = $.white.id;
-btn.appendChild(label);
-```
-
-### Input Field
-```javascript
-const field = figma.createFrame();
-field.name = "Input Field";
-field.resize(345, 56);
-field.cornerRadius = 16;
-field.layoutMode = "HORIZONTAL";
-field.counterAxisAlignItems = "CENTER";
-field.paddingLeft = field.paddingRight = 20;
-if ($.inputBg) field.fillStyleId = $.inputBg.id;
-
-const placeholder = figma.createText();
-placeholder.fontName = { family: "Inter", style: "Regular" };
-placeholder.fontSize = 16;
-placeholder.characters = "Placeholder";
-if ($.textMuted) placeholder.fillStyleId = $.textMuted.id;
-field.appendChild(placeholder);
-```
-
-### Text Link
-```javascript
-const link = figma.createText();
-link.fontName = { family: "Inter", style: "Semi Bold" };
-link.fontSize = 14;
-link.characters = "Click here";
-if ($.primary) link.fillStyleId = $.primary.id;
-```
 
 ---
 

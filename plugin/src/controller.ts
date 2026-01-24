@@ -1,6 +1,8 @@
 // ============================================================================
 // Figma Plugin Controller - Main Thread
 // ============================================================================
+import { CreationEngine } from './creation_engine';
+
 // This code runs in the Figma sandbox and handles:
 // - Message relay between UI and Figma API
 // - Code execution from the IDE
@@ -12,6 +14,10 @@ figma.showUI(__html__, { width: 400, height: 300 });
 // ============================================================================
 // Message Handling
 // ============================================================================
+
+// Global RAM Caches
+let cachedAvailableFonts: Font[] | null = null;
+const styleCache = new Map<string, BaseStyle>();
 
 figma.ui.onmessage = async (msg: {
     type: string;
@@ -163,9 +169,9 @@ async function handleExecute(code: string, requestId: string) {
         const wrappedCode = `
             return new Promise(async (resolve, reject) => {
                 try {
-                    const result = await (async function(figma) {
+                    const result = await (async function(figma, $) {
                         ${functionBody}
-                    })(figma);
+                    })(figma, $);
                     resolve(result);
                 } catch (error) {
                     reject(error);
@@ -173,8 +179,9 @@ async function handleExecute(code: string, requestId: string) {
             });
         `;
 
-        const fn = new Function("figma", wrappedCode);
-        const result = await fn(figma);
+        const $ = new CreationEngine(figma);
+        const fn = new Function("figma", "$", wrappedCode);
+        const result = await fn(figma, $);
 
         // Serialize result for transport
         const serializedResult = serializeForTransport(result);
@@ -226,7 +233,7 @@ async function handleGetManifest(requestId: string) {
 // Smart Scan - Deep Page Scan (Fixed serialization)
 // ============================================================================
 
-async function handleDeepScan(pageId: string, requestId: string) {
+async function handleDeepScan(pageId: string, requestId: string, maxDepth: number = 20) {
     const page = figma.root.children.find((p) => p.id === pageId);
 
     if (!page) {
@@ -234,7 +241,9 @@ async function handleDeepScan(pageId: string, requestId: string) {
         return;
     }
 
-    const scanNode = (node: SceneNode, depth: number = 0): object => {
+    const scanNode = (node: SceneNode, depth: number = 0): object | null => {
+        if (depth > maxDepth) return null;
+
         const base: Record<string, unknown> = {
             id: node.id,
             name: node.name,
@@ -395,12 +404,14 @@ async function handleGetDesignContext(
     fontFamilyFilter?: string
 ) {
     try {
-        // 1. Get available fonts
-        const allFonts = await figma.listAvailableFontsAsync();
-        let fonts = allFonts;
+        // 1. Get available fonts (Cached)
+        if (!cachedAvailableFonts) {
+            cachedAvailableFonts = await figma.listAvailableFontsAsync();
+        }
+        let fonts = cachedAvailableFonts;
 
         if (fontFamilyFilter) {
-            fonts = allFonts.filter(f =>
+            fonts = fonts.filter(f =>
                 f.fontName.family.toLowerCase().includes(fontFamilyFilter.toLowerCase())
             );
         }

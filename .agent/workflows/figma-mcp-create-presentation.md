@@ -60,6 +60,22 @@ For each slide in deck:
    - position: {Calculated X/Y coordinates}
 ```
 
+### Fallback: Create from Scratch
+If no suitable template exists, use `$.create`:
+
+```javascript
+/* Create a Title Slide from scratch */
+const slide = await $.create("FRAME", {
+    name: "Custom Slide",
+    width: 1920, height: 1080,
+    fill: "Background/Dark",
+    layout: "VERTICAL", 
+    align: "center", gap: 40
+}, [
+    $.create("TEXT", { text: "New Slide", font: "Display/H1", fill: "Text/Inverse" })
+]);
+```
+
 ---
 
 ## Step 4: Smart Content Fill & Cleanup

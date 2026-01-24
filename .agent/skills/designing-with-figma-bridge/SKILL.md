@@ -49,39 +49,18 @@ Copy and track progress:
 
 ## Mandatory Rules
 
-### ⚠️ NEVER Hardcode Values
+### 1. Use Declarative Helpers (`$`)
+- Use `$.create` for new layouts.
+- Use `$.clone` for modifications.
+- **Why?** It automatically handles styles, fonts, and auto-layout order correctly.
 
-```javascript
-// ❌ WRONG
-node.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.6, b: 0.4 } }];
-// ❌ ALSO WRONG (Ambiguous Name Lookup)
-// const style = figma.getLocalPaintStyles().find(s => s.name === "Primary/500");
+### 2. Style Names over IDs
+- With `$.create`, you can use style names: `fill: "Primary/500"`.
+- The engine will find the ID for you.
 
-// ✅ CORRECT (Strict ID from Context)
-// const primaryId = context.designSystem.paintStyles.find(s => s.name === "Primary/500").id;
-if (primaryId) node.fillStyleId = primaryId;
-```
-
-### ⚠️ ALWAYS Load Fonts First
-
-```javascript
-// Load BEFORE any text operation
-await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-await figma.loadFontAsync({ family: "Inter", style: "Medium" });
-```
-
-### ⚠️ Layout Order Matters
-
-```javascript
-// 1. Create frame
-const frame = figma.createFrame();
-// 2. Set layout mode BEFORE adding children
-frame.layoutMode = "VERTICAL";
-// 3. Add children
-frame.appendChild(child);
-// 4. Set sizing AFTER appendChild
-child.layoutSizingHorizontal = "FILL";
-```
+### 3. Font Loading is Automatic
+- `$.create` and `$.modify` handle `loadFontAsync` for you.
+- You do NOT need to manually await fonts when using helpers.
 
 ---
 
@@ -124,86 +103,55 @@ Extracts:
 
 ## Phase 3: Create Elements
 
-### 🚀 Clone Existing Pattern (PRIORITY)
+### 🚀 Clone & Tweak (Method A - PRIORITY)
 
-When replicating existing designs, **ALWAYS CHECK FOR CLONABLE PATTERNS FIRST.**
+The fastest way to consistent designs is to clone and modify.
 
 ```javascript
-// PRIORITY: Use this BEFORE creating manual layouts
-mcp_figma-bridge_clone_node (
-  targetNodeId: "<id>",
-  newName: "Cloned Frame",
-  offsetX: 100,
-  offsetY: 0
-)
+// Clone "Contact Form" and update content
+const contactFormId = "123:456";
+const newForm = await $.clone(contactFormId, {
+   "Title": { text: "Registration" },            // Updates text
+   "Submit Button": { fill: "Brand/Primary" },   // Updates style
+   "Hero Image": { fill: "#F5F5F5" }             // Updates color
+});
 ```
 
-> 🏆 **PRO TIP**: Cloning is 10x faster and 100x more accurate than manual creation.
+### ⚡ Declarative Creation (Method B)
 
-### Instance Component (Second Priority)
-
-If a component exists for what you are building (e.g. "Card", "Button"), **USE IT**. Do not build it from primitives.
+Build new UIs using the `$` helper for implicit styling and layout.
 
 ```javascript
-const componentKey = "abc123"; // From get_design_context
-const component = await figma.importComponentByKeyAsync(componentKey);
-const instance = component.createInstance();
-
-// Override text
-const label = instance.findOne(n => n.type === "TEXT" && n.name === "Label");
-if (label) {
-  await figma.loadFontAsync(label.fontName);
-  label.characters = "New Label";
-}
-
-parentFrame.appendChild(instance);
+// Create a card with auto-layout
+await $.create("FRAME", {
+    name: "User Card",
+    layout: "VERTICAL",
+    fill: "Surface/Card",  // Finds "Surface/Card" style ID
+    corner: 16,
+    pad: 24,
+    gap: 16,
+    effect: "Shadow/Small" // Finds effect style ID
+}, [
+    // Header
+    $.create("FRAME", { layout: "HORIZONTAL", gap: "AUTO", width: "FILL" }, [
+        $.create("TEXT", { text: "Jane Doe", font: "H3", fill: "Text/Primary" }),
+        $.create("TEXT", { text: "Admin", font: "Label/Small", fill: "Brand/Secondary" })
+    ]),
+    // Body
+    $.create("TEXT", { 
+        text: "User details description goes here...", 
+        font: "Body/Regular", 
+        fill: "Text/Secondary" 
+    })
+]);
 ```
 
-### Create Frame (Fallback)
+### ⚠️ Manual API (Fallback)
 
-Only create frames manually if no existing pattern or component exists.
-
+Use standard `figma.*` API only when `$` helpers are insufficient (e.g., complex vector paths).
 ```javascript
-// Via mcp_figma-bridge_execute_figma_command
-const frame = figma.createFrame();
-frame.name = "My Frame";
-frame.resize(1440, 900);
-
-// Apply style from context (USE IDs!)
-// const bgStyleId = context.lookup.styles["Background"];
-if (bgStyleId) frame.fillStyleId = bgStyleId;
-
-// Set auto-layout
-frame.layoutMode = "VERTICAL";
-frame.primaryAxisSizingMode = "AUTO";
-frame.counterAxisSizingMode = "FIXED";
-frame.itemSpacing = 16;
-frame.paddingTop = 24;
-frame.paddingBottom = 24;
-
-figma.currentPage.appendChild(frame);
-return { id: frame.id };
-```
-
-### Create Text
-
-```javascript
-// Use dynamic fonts from context
-const font = context.designSystem.fonts[0] || { family: "Inter", style: "Medium" };
-await figma.loadFontAsync(font);
-
-const text = figma.createText();
-text.characters = "Heading";
-
-// Use text style (USE IDs!)
-// const h1Id = context.lookup.styles["H1"];
-if (h1Id) text.textStyleId = h1Id;
-
-// Or apply paint style for color
-// const textParams = context.lookup.styles["TextPrimary"];
-if (textParams) text.fillStyleId = textParams;
-
-parentFrame.appendChild(text);
+const vector = figma.createVector();
+// ... manual setup
 ```
 
 ---
