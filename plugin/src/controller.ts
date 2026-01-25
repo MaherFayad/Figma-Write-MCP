@@ -166,18 +166,19 @@ async function handleExecute(code: string, requestId: string) {
         }
 
         // Use direct eval to interpret the function expression
-        // We use eval to bypass 'new Function' shim limitations in some environments (like quickjs-emscripten)
-        // that restrict argument names or syntax.
+        // We use eval to bypass 'new Function' shim limitations in some environments.
         const $ = new CreationEngine(figma);
 
         // Wrap code in an async IIFE to support await and returns
+        // Key fix: We define the function in the string, then verify it evaluates to a function, then call it
         const evalCode = `
             (async function(figma, $) {
                 ${functionBody}
-            })(figma, $)
+            })
         `;
 
-        const result = await eval(evalCode);
+        const fn = eval(evalCode);
+        const result = await fn(figma, $);
 
         // Serialize result for transport
         const serializedResult = serializeForTransport(result);
